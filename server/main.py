@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from server.groq import ask_groq
+
 app = FastAPI()
 
 
@@ -15,6 +17,7 @@ def root():
 
 @app.post("/chat")
 async def chat(body: ChatRequest):
+    res = ask_groq(body.message)
     return {
-        "response": f"You said: {body.message}"
+        "response": res
     }

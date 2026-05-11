@@ -1,3 +1,5 @@
 fastapi
+groq
+python-dotenv
 streamlit
 uvicorn[standard]
