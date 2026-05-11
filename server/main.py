@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from server.drive_search import search_files
+from server.google_drive import get_drive_service
 from server.groq import ask_groq
 
 app = FastAPI()
+
+service = get_drive_service()
 
 
 class ChatRequest(BaseModel):
@@ -17,7 +21,9 @@ def root():
 
 @app.post("/chat")
 async def chat(body: ChatRequest):
-    res = ask_groq(body.message)
+    user_msg = body.message
+    files = search_files(service, f"name contains '{user_msg}'")
+    # res = ask_groq(body.message)
     return {
-        "response": res
+        "response": f"Found {len(files)} files",
     }
