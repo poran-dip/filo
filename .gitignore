@@ -1,0 +1,26 @@
+# logs
+*.log
+
+# venv
+venv/
+
+# cache
+__pycache__/
+
+# env variables
+.env*
+!.env.example
+
+# build
+dist/
+build/
+*.egg-info/
+
+# ide
+.vscode/
+!.vscode/extensions.json
+.idea/
+
+# misc
+.DS_Store
+*.local
