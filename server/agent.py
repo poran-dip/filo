@@ -17,13 +17,24 @@ Drive q-string syntax rules:
 - File type:          mimeType = 'application/pdf'
                       mimeType = 'application/vnd.google-apps.spreadsheet'
                       mimeType = 'application/vnd.google-apps.document'
-                      mimeType = 'image/jpeg' or mimeType contains 'image/'
+                      mimeType contains 'image/'  # use this for any image request (catches jpg, png, jpeg, etc.)
 - Full text search:   fullText contains 'keyword'
-- Date filter:        modifiedTime > '2025-05-08T00:00:00'
-- Combine:            name contains 'report' and modifiedTime > '2026-02-01T00:00:00'
+- Date filters:       modifiedTime > '2024-01-01T00:00:00'
+                      createdTime < '2024-06-01T00:00:00'
+                      modifiedByMeTime > '2024-01-01T00:00:00'
+                      viewedByMeTime > '2024-01-01T00:00:00'
+                      Operators: > < =
+- Combinators:        and, or, not, and parentheses for grouping
+                      e.g. (name contains 'invoice' or fullText contains 'invoice') and mimeType = 'application/pdf'
+                      e.g. not mimeType = 'application/vnd.google-apps.folder'
 
-After getting results, present them clearly. If no files are found, say so and suggest refining the search.
-Never fabricate file names. Only report what the tool returns.
+Key rules:
+- When keyword implies document category or semantic content (e.g. "invoices", "reports"), search BOTH name and fullText: name contains 'invoice' or fullText contains 'invoice'
+- For "all files", use: mimeType != 'application/vnd.google-apps.folder'
+- Never pass an empty query string
+- Only use operators with time fields
+- If the user is vague, try to make a best-effort query based on intent once before asking for clarification
+- Be concise. Do not add filler closing lines after every response.
 """
 
 llm = ChatGroq(model="llama-3.3-70b-versatile")
