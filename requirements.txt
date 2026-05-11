@@ -2,6 +2,9 @@ fastapi
 google-api-python-client
 google-auth
 groq
+langchain
+langchain-groq
+langgraph
 python-dotenv
 streamlit
 uvicorn[standard]

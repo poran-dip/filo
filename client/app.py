@@ -17,10 +17,16 @@ if user_input:
 
     res = requests.post(
         "http://localhost:8000/chat",
-        json={"message": user_input}
+        json={"messages": st.session_state.messages}
     )
+    data = res.json()
 
-    bot_reply = res.json()["response"]
+    bot_reply = data["response"]
+    files = data.get("files", [])
 
     st.chat_message("assistant").write(bot_reply)
     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+
+    if files:
+        for f in files:
+            st.markdown(f"- [{f['name']}]({f.get('webViewLink', '#')})")
