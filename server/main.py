@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from server.drive_search import search_files
-from server.google_drive import get_drive_service
+from server.drive import get_drive_service, search_files
 from server.groq import ask_groq
 
 app = FastAPI()
