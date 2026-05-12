@@ -51,7 +51,7 @@ def search_files(service, query: str) -> list[dict]:
 
     results = service.files().list(
         q=q,
-        fields="files(id, name, mimeType, modifiedTime, webViewLink)"
+        fields="files(id, name, mimeType, size, modifiedTime, webViewLink)"
     ).execute()
 
     return results.get("files", [])

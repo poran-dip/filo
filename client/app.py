@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import requests
 import streamlit as st
 from client.config import BACKEND_URL
@@ -14,45 +17,61 @@ if "file_results" not in st.session_state:
 def _render_files(files: list[dict]):
     if not files:
         return
-    st.markdown("**Files found:**")
-    if len(files) <= 6:
-        cols_per_row = 2
-        for i in range(0, len(files), cols_per_row):
-            cols = st.columns(cols_per_row)
-            for j, file in enumerate(files[i : i + cols_per_row]):
-                with cols[j]:
-                    mime = file.get("mimeType", "")
-                    icon = (
-                        "📄" if "document" in mime else
-                        "📊" if "spreadsheet" in mime else
-                        "📑" if "pdf" in mime else
-                        "🖼️" if "image" in mime else
-                        "📁"
-                    )
-                    modified = file.get("modifiedTime", "")[:10]
-                    link = file.get("webViewLink", "#")
-                    st.markdown(
-                        f"""
-                        <div style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin:4px 0">
-                            <div style="font-size:1.5rem">{icon}</div>
-                            <div style="font-weight:600; margin:4px 0">{file['name']}</div>
-                            <div style="color:#888; font-size:0.8rem">Modified: {modified}</div>
-                            <a href="{link}" target="_blank">🔗 Open in Drive</a>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-    else:
-        for f in files:
-            mime = f.get("mimeType", "")
-            icon = (
-                "📄" if "document" in mime else
-                "📊" if "spreadsheet" in mime else
-                "📑" if "pdf" in mime else
-                "🖼️" if "image" in mime else
-                "📁"
-            )
-            st.markdown(f"{icon} [{f['name']}]({f.get('webViewLink', '#')}) — {f.get('modifiedTime', '')[:10]}")
+
+    def get_icon(mime):
+        return (
+            "📄" if "document" in mime else
+            "📊" if "spreadsheet" in mime else
+            "📑" if "pdf" in mime else
+            "🖼️" if "image" in mime else
+            "📁" if "folder" in mime else
+            "📎"
+        )
+
+    def format_size(size):
+        if not size:
+            return "—"
+        size = int(size)
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 ** 2:
+            return f"{size / 1024:.1f} KB"
+        else:
+            return f"{size / 1024 ** 2:.1f} MB"
+
+    rows = ""
+    for f in files:
+        icon = get_icon(f.get("mimeType", ""))
+        name = f.get("name", "Untitled")
+        link = f.get("webViewLink", "#")
+        modified = f.get("modifiedTime", "")[:10]
+        size = format_size(f.get("size"))
+        rows += f"""
+        <tr>
+            <td style="font-size:1.2rem; text-align:center">{icon}</td>
+            <td><a href="{link}" target="_blank" style="text-decoration:none">{name}</a></td>
+            <td style="color:#888; font-size:0.85rem">{modified}</td>
+            <td style="color:#888; font-size:0.85rem">{size}</td>
+        </tr>
+        """
+
+    table_html = f"""
+    <style>
+    * {{ font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; }}
+    </style>
+    <table style="width:100%; border-collapse:collapse; margin-top:8px">
+        <thead>
+            <tr style="border-bottom:1px solid #e0e0e0; color:#555; font-size:0.8rem; text-transform:uppercase">
+                <th style="width:40px"></th>
+                <th style="text-align:left; padding:6px 0">Name</th>
+                <th style="text-align:left; padding:6px 0">Modified</th>
+                <th style="text-align:left; padding:6px 0">Size</th>
+            </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+    </table>
+    """
+    st.iframe(table_html, height=min(80 + len(files) * 48, 600))
 
 # Render history
 for i, msg in enumerate(st.session_state.messages):
