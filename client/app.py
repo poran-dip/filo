@@ -6,8 +6,8 @@ import streamlit as st
 from client.config import BACKEND_URL
 
 
-st.set_page_config(page_title="Drive Chat Agent", page_icon="📁")
-st.title("📁 Drive Chat Agent")
+st.set_page_config(page_title="Filo", page_icon="🗂️")
+st.title("🗂️ Filo")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -22,6 +22,7 @@ def _render_files(files: list[dict]):
         return (
             "📄" if "document" in mime else
             "📊" if "spreadsheet" in mime else
+            "📝" if "presentation" in mime else
             "📑" if "pdf" in mime else
             "🖼️" if "image" in mime else
             "📁" if "folder" in mime else
@@ -85,7 +86,7 @@ if user_input:
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    with st.spinner("Searching..."):
+    with st.spinner("Thinking..."):
         try:
             res = requests.post(
                 f"{BACKEND_URL}/chat",
@@ -94,9 +95,13 @@ if user_input:
             res.raise_for_status()
             data = res.json()
         except Exception as e:
-            st.error(f"Backend error: {e}")
+            print(f"[error] Backend error: {e}")
             st.session_state.messages.pop()
-            st.stop()
+            data = None
+
+    if data is None:
+        st.error("Something went wrong. Please try again.")
+        st.stop()
 
     bot_reply = data["response"]
     files = data.get("files", [])
