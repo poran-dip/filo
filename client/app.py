@@ -6,6 +6,8 @@ import streamlit as st
 from client.config import BACKEND_URL
 
 
+st.write(BACKEND_URL)
+
 st.set_page_config(page_title="Filo", page_icon="🗂️")
 st.title("🗂️ Filo")
 
