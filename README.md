@@ -2,6 +2,10 @@
 
 Filo AI is a conversational Drive assistant that finds your files through natural chat. Search by name, type, content, or date — Filo translates your intent into precise Drive API queries and stays focused on your files.
 
+Check it out on [filo-ai.streamlit.app](https://filo-ai.streamlit.app/).
+
+**Note:** The live deployment only has access to a test Drive folder. To use Filo with your own Drive, clone the repo, set up a service account, and configure the `.env` as described below.
+
 ## Stack
 
 - **Backend** — Python, FastAPI, LangGraph, LangChain, Groq (Llama 3.3 70B)
@@ -18,19 +22,20 @@ Filo AI is a conversational Drive assistant that finds your files through natura
 - Stays focused — politely redirects off-topic questions back to file search
 - Smart no-results handling — suggests broader queries instead of dead ends
 
-## Project Structure
-
-```
+```bash
 filo/
 ├── server/
 │   ├── main.py       # FastAPI app
 │   ├── agent.py      # LangGraph agent + system prompt
 │   ├── tools.py      # drive_search LangChain tool
-│   └── drive.py      # Google Drive API client
+│   ├── drive.py      # Google Drive API client
+│   └── config.py     # Server configuration
 ├── client/
-│   └── app.py        # Streamlit chat interface
+│   ├── app.py        # Streamlit chat interface
+│   └── config.py     # Client configuration
 ├── render.yaml       # Render deployment config
 ├── requirements.txt
+├── runtime.txt
 └── .env.example
 ```
 
@@ -47,7 +52,7 @@ filo/
 1. Clone the repo and create a virtual environment:
 
 ```bash
-git clone https://github.com/your-username/drive-chat-agent
+git clone https://github.com/poran-dip/filo.git
 cd drive-chat-agent
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
