@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from dotenv import load_dotenv
@@ -13,11 +14,12 @@ CACHE_TTL = 3600    # 1 hour
 
 
 def get_drive_service():
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not set")
-    creds = service_account.Credentials.from_service_account_file(
-        creds_path,
+    creds = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if not creds:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not set")
+    info = json.loads(creds)
+    creds = service_account.Credentials.from_service_account_info(
+        info,
         scopes=SCOPES
     )
 
