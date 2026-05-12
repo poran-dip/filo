@@ -6,8 +6,6 @@ import streamlit as st
 from client.config import BACKEND_URL
 
 
-st.write(BACKEND_URL)
-
 st.set_page_config(page_title="Filo", page_icon="🗂️")
 st.title("🗂️ Filo")
 
@@ -90,6 +88,7 @@ if user_input:
 
     with st.spinner("Thinking..."):
         try:
+            st.write(f"Trying to hit {BACKEND_URL}/chat")
             res = requests.post(
                 f"{BACKEND_URL}/chat",
                 json={"messages": st.session_state.messages},
