@@ -17,7 +17,7 @@ Check it out on [filo-ai.streamlit.app](https://filo-ai.streamlit.app/).
 - Natural language search across a designated Google Drive folder (and all subfolders)
 - Searches by file name, MIME type, full-text content, and date filters
 - Multi-turn conversation — follow-up and refine searches naturally across the session
-- File results rendered as cards with direct Drive links
+- File results rendered as a table with direct Drive links
 - Powered by LangGraph tool-calling — the LLM constructs valid Drive `q` parameter strings
 - Stays focused — politely redirects off-topic questions back to file search
 - Smart no-results handling — suggests broader queries instead of dead ends
