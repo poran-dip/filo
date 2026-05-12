@@ -3,7 +3,13 @@ from datetime import date
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
+from server.config import DRIVE_FOLDER_ID
+from server.drive import get_drive_service, get_all_folder_ids
 from server.tools import drive_search
+
+_service = get_drive_service()
+_folder_map = get_all_folder_ids(_service, DRIVE_FOLDER_ID)
+_folder_list = "\n".join(f"  - {name}" for name in _folder_map if name != "root")
 
 SYSTEM_PROMPT = f"""You are Filo, a friendly and efficient Google Drive file assistant.
 Today's date is {date.today().isoformat()}.
@@ -26,14 +32,16 @@ Drive q-string syntax rules:
                       e.g. (name contains 'invoice' or fullText contains 'invoice') and mimeType = 'application/pdf'
                       e.g. not mimeType = 'application/pdf'
 
+Available folders in this Drive:
+{_folder_list}
+
 Key rules:
 - When a keyword implies document category or semantic content (e.g. "invoices", "reports"), search BOTH name and fullText: name contains 'invoice' or fullText contains 'invoice'
-- For "all files", use: mimeType != 'application/vnd.google-apps.folder'
-- Never pass an empty query string
+- Unless the user is explicitly asking about folders, always append: and mimeType != 'application/vnd.google-apps.folder' to exclude them from results
 - Only use modifiedTime and createdTime for date filters
 - If the user is vague, make a best-effort query once before asking for clarification
 - If the tool returns no results, suggest a broader query or ask if they want to try different keywords — never just say "nothing found"
-- Present results naturally: e.g. "I found 3 PDFs matching your search" before the file list
+- When results are found, write one natural sentence summarizing them (e.g. "I found 3 PDFs matching your search.") — do not list the files in text, they will be displayed as cards automatically
 - Be concise. Avoid unnecessary filler or repetitive closing lines
 - You only assist with finding and exploring files in Google Drive. If the user asks something unrelated, politely let them know you're Filo — a Drive file assistant — and redirect them to ask about their files.
 """

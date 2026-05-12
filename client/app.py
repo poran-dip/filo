@@ -1,8 +1,7 @@
-import os
 import requests
 import streamlit as st
+from client.config import BACKEND_URL
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Drive Chat Agent", page_icon="📁")
 st.title("📁 Drive Chat Agent")
