@@ -74,12 +74,11 @@ streamlit run client/app.py
 
 ## Environment Variables
 
-| Variable                      | Description                                                                 |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| `GROQ_API_KEY`                | Your Groq API key                                                           |
-| `DRIVE_FOLDER_ID`             | Root Google Drive folder ID to search within                                |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full contents of the service account JSON file (single line)                |
-| BACKEND_URL                   | URL of the deployed backend (e.g. https://drive-agent-backend.onrender.com) |
+| Variable                      | Description                                                   |
+| ----------------------------- | ------------------------------------------------------------- |
+| `GROQ_API_KEY`                | Your Groq API key                                             |
+| `DRIVE_FOLDER_ID`             | Root Google Drive folder ID to search within                  |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full contents of the service account JSON file (single line)  |
 
 See `.env.example` for reference.
 
