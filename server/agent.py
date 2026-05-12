@@ -1,8 +1,8 @@
+import ast
 from datetime import date
-from langchain_groq import ChatGroq
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
-
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_groq import ChatGroq
 from server.tools import drive_search
 
 SYSTEM_PROMPT = f"""You are a helpful Google Drive file assistant.
@@ -66,11 +66,10 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
     files = []
     for msg in all_messages:
         if hasattr(msg, "name") and msg.name == "drive_search":
-            import json
-            try:
-                import ast
-                files = ast.literal_eval(msg.content)
-            except Exception:
-                files = []
+            if msg.content != "No files found.":
+                try:
+                    files = ast.literal_eval(msg.content)
+                except Exception:
+                        files = []
 
     return ai_reply, files

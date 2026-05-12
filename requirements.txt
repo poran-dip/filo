@@ -6,5 +6,6 @@ langchain
 langchain-groq
 langgraph
 python-dotenv
+requests
 streamlit
 uvicorn[standard]

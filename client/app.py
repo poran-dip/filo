@@ -1,5 +1,8 @@
-import streamlit as st
+import os
 import requests
+import streamlit as st
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Drive Chat Agent", page_icon="📁")
 st.title("📁 Drive Chat Agent")
@@ -67,7 +70,7 @@ if user_input:
     with st.spinner("Searching..."):
         try:
             res = requests.post(
-                "http://localhost:8000/chat",
+                f"{BACKEND_URL}/chat",
                 json={"messages": st.session_state.messages},
             )
             res.raise_for_status()
