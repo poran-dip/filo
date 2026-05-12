@@ -88,17 +88,18 @@ if user_input:
 
     with st.spinner("Thinking..."):
         try:
-            st.write(f"Trying to hit {BACKEND_URL}/chat")
             res = requests.post(
                 f"{BACKEND_URL}/chat",
                 json={"messages": st.session_state.messages},
+                timeout=30
             )
             res.raise_for_status()
             data = res.json()
         except Exception as e:
-            print(f"[error] Backend error: {e}")
+            print(f"[error] {type(e).__name__}: {e}")
+            st.error(f"Debug: {type(e).__name__}: {e}")
             st.session_state.messages.pop()
-            data = None
+            st.stop()
 
     if data is None:
         st.error("Something went wrong. Please try again.")
