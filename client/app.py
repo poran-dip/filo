@@ -91,19 +91,15 @@ if user_input:
             res = requests.post(
                 f"{BACKEND_URL}/chat",
                 json={"messages": st.session_state.messages},
-                timeout=30
+                timeout=30,
             )
             res.raise_for_status()
             data = res.json()
         except Exception as e:
             print(f"[error] {type(e).__name__}: {e}")
-            st.error(f"Debug: {type(e).__name__}: {e}")
+            st.error("Something went wrong. Please try again.")
             st.session_state.messages.pop()
             st.stop()
-
-    if data is None:
-        st.error("Something went wrong. Please try again.")
-        st.stop()
 
     bot_reply = data["response"]
     files = data.get("files", [])
