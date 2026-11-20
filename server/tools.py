@@ -78,4 +78,12 @@ def drive_list(
         if exc.resp.status == 400:
             return "Invalid listing request. Retry from the first page.", {}
         raise
-    return json.dumps(page), {"files": page.get("files", []), "continuation": bool(page_token)}
+    files = page.get("files", [])
+    # The model gets what it needs to navigate and to compare files (newest, largest);
+    # webViewLink and other bulk go only to the UI via the artifact. Absent keys are
+    # omitted, e.g. Google-native files have no size.
+    keep = ("id", "name", "mimeType", "modifiedTime", "size")
+    summary = {"files": [{key: f[key] for key in keep if key in f} for f in files]}
+    if page.get("nextPageToken"):
+        summary["nextPageToken"] = page["nextPageToken"]
+    return json.dumps(summary), {"files": files, "continuation": bool(page_token)}

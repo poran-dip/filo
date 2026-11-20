@@ -12,6 +12,7 @@ Today's date is {date.today().isoformat()}.
 
 Use `drive_list` to browse a folder. Start at the configured root, then use returned folder IDs to navigate.
 For a complete listing, follow nextPageToken until it is absent.
+Listings include modifiedTime and size, so questions like newest or largest can be answered from them, but only once every page has been read. Google-native files (Docs, Sheets) have no size.
 Use `drive_search` to find files by keyword, type or date.
 Translate their natural language request into a valid Google Drive API `q` parameter string.
 
