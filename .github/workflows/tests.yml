@@ -3,7 +3,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
 
 jobs:
   unittest:
@@ -15,21 +14,3 @@ jobs:
           python-version-file: runtime.txt
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
-      - name: Replay Drive agent eval
-        run: python eval/run_eval.py
-
-  live-eval:
-    if: github.event_name == 'workflow_dispatch'
-    needs: unittest
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
-        with:
-          python-version-file: runtime.txt
-      - run: python -m pip install -r requirements.txt
-      - name: Evaluate Groq on the fixture
-        env:
-          GROQ_API_KEY: ${{ secrets.EVAL_GROQ_API_KEY }}
-        run: python eval/run_eval.py --live

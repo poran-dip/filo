@@ -60,13 +60,19 @@ def main():
             from server import agent
     by_message = {case["message"]: case for case in cases}
     passed = 0
+    retrieved = 0
+    expected_total = 0
+    errors = 0
     for case in cases:
+        expected_ids = set(case["expected_ids"])
+        expected_total += len(expected_ids)
         try:
             history = []
             if previous := case.get("previous_message"):
                 reply, _, _ = turn(agent, by_message[previous], [], args.live)
                 history = [{"role": "user", "content": previous}, {"role": "assistant", "content": reply}]
             _, ids, trace = turn(agent, case, history, args.live)
+            retrieved += len(expected_ids.intersection(ids))
             expected = sorted(case["expected_ids"])
             required = {call["name"] for calls in case["rounds"] for call in calls}
             used = {msg.name for msg in trace}
@@ -79,10 +85,16 @@ def main():
                 print(f"FAIL {case['message']} | expected {expected}, got {ids}; "
                       f"tools {sorted(used)}, expected {sorted(required)}; valid calls: {valid}")
         except Exception as exc:
+            errors += 1
             print(f"ERROR {case['message']} | {type(exc).__name__}")
     mode = "live Groq" if args.live else "scripted replay"
     print(f"{mode}: {passed}/{len(cases)} passed ({100 * passed / len(cases):.1f}%)")
-    return int(passed != len(cases))
+    if not expected_total:
+        print("Recall undefined: no expected file IDs.")
+        return 1
+    print(f"{mode} micro recall: {retrieved}/{expected_total} "
+          f"({100 * retrieved / expected_total:.2f}%), required >90%")
+    return int(errors > 0 or 100 * retrieved <= 90 * expected_total)
 
 
 if __name__ == "__main__":

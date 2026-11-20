@@ -97,8 +97,12 @@ See `.env.example` for reference.
 Run `python eval/run_eval.py` after installing the project requirements. The runner
 exercises the production agent graph, tools and displayed file IDs against a fixed
 local folder tree. Each of the 23 cases includes a user request, reference tool
-calls, expected IDs and a note. The runner prints failures and the overall pass
-rate, and exits nonzero if any case fails.
+calls, expected IDs and a note. The runner prints exact-case failures, the pass rate and micro recall.
+Recall sums unique expected IDs retrieved per case and divides by the total
+expected IDs across cases. Duplicates earn no extra credit. Extra cards, wrong
+tools and zero-hit cases are still checked in the exact-case report.
+The eval passes when recall strictly exceeds 90% and the run completes without
+execution errors. A suite with no expected IDs cannot pass.
 
 | Scripted tool-call replay | Passed |
 | --- | --- |
@@ -107,8 +111,8 @@ rate, and exits nonzero if any case fails.
 
 The baseline dropped the PDFs when parallel calls returned PDFs and images.
 Replay supplies model responses, so its score measures tool execution and card
-selection. GitHub Actions runs it on pull requests and pushes to main as part of
-the existing `unittest` check. Require that check in branch protection to gate merges.
+selection. GitHub Actions runs it on pull requests and pushes to main in the
+**Drive agent eval** workflow. Require its `replay-recall` check in branch protection to gate merges.
 
 To measure natural-language tool selection, set `GROQ_API_KEY` and run
 `python eval/run_eval.py --live`. Groq receives the user conversation and chooses
@@ -118,5 +122,5 @@ unscored. The fixture approximates text matching and uses fixed UTC timestamps;
 neither mode requires Drive credentials. No live score has been recorded here.
 
 For a pre-merge live run, configure the repository secret `EVAL_GROQ_API_KEY` and
-manually run the **tests** workflow on the trusted branch to review. The live job
+manually run the **Drive agent eval** workflow on the trusted branch to review. The live job
 uses Groq quota and reports model or provider errors as failed cases.
