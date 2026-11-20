@@ -22,6 +22,106 @@ class DriveSearchTests(unittest.TestCase):
             drive.search_files(service, "invalid")
         self.assertEqual(service.mock_calls, [])
 
+    @patch.object(drive, "_folder_cache", None)
+    def test_discovers_same_named_folders_across_pages(self):
+        service = Mock()
+        api_list = service.files.return_value.list
+        pages = {
+            ("root", None): {"files": [{"id": "a", "name": "notes"}], "nextPageToken": "more"},
+            ("root", "more"): {"files": [{"id": "b", "name": "notes"}]},
+            ("b", None): {"files": [{"id": "nested"}]},
+            ("nested", None): {},
+            ("a", None): {},
+        }
+
+        def list_children(q, fields, pageToken):
+            self.assertIn("nextPageToken", fields)
+            parent = q.split("'")[1]
+            return Mock(execute=Mock(return_value=pages.pop((parent, pageToken))))
+
+        api_list.side_effect = list_children
+        ids = drive.get_all_folder_ids(service, "root")
+        self.assertCountEqual(ids, ["root", "a", "b", "nested"])
+        self.assertFalse(pages)
+        self.assertEqual(drive.get_all_folder_ids(service, "root"), ids)
+
+    def test_search_paginates_each_scoped_batch(self):
+        service = Mock()
+        folders = tuple(f"folder-{i}" for i in range(drive.PARENTS_PER_QUERY + 1))
+        query = "name contains 'a' or name contains 'b'"
+        api_list = service.files.return_value.list
+        api_list.return_value.execute.side_effect = [
+            {"files": [], "nextPageToken": "more"},
+            {"files": [{"id": "first"}]},
+            {"files": [{"id": "first"}], "nextPageToken": "last"},
+            {"files": [{"id": "final"}]},
+        ]
+        with patch.object(drive, "get_all_folder_ids", return_value=folders):
+            files, truncated = drive.search_files(service, query)
+        self.assertFalse(truncated)
+        self.assertEqual(files, [{"id": "first"}, {"id": "final"}])
+        for call, batch, token in zip(
+            api_list.call_args_list,
+            [folders[:-1], folders[:-1], folders[-1:], folders[-1:]],
+            [None, "more", None, "last"],
+            strict=True,
+        ):
+            parents = " or ".join(f"'{fid}' in parents" for fid in batch)
+            self.assertEqual(call.kwargs["q"], f"({parents}) and ({query}) and trashed = false")
+            self.assertEqual(call.kwargs["pageToken"], token)
+            self.assertIn("nextPageToken", call.kwargs["fields"])
+
+    @patch.object(drive, "_folder_cache", None)
+    def test_expiry_refreshes_tree_and_breaks_cycles(self):
+        service = Mock()
+        fetch = service.files.return_value.list.return_value.execute
+        fetch.side_effect = [{"files": [{"id": "child"}]}, {"files": [{"id": "root"}]}, {}]
+        with patch.object(drive.time, "monotonic", return_value=0) as clock:
+            self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root", "child"))
+            clock.return_value = drive.CACHE_TTL - 1
+            self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root", "child"))
+            clock.return_value = drive.CACHE_TTL
+            self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root",))
+        self.assertEqual(fetch.call_count, 3)
+
+    @patch.object(drive, "_folder_cache", None)
+    def test_new_root_bypasses_unexpired_cache(self):
+        service = Mock()
+        service.files.return_value.list.return_value.execute.return_value = {}
+        for root in ("first", "second"):
+            self.assertEqual(drive.get_all_folder_ids(service, root), (root,))
+
+    def test_exact_batch_and_result_limits(self):
+        service = Mock()
+        folders = tuple(str(i) for i in range(drive.PARENTS_PER_QUERY))
+        rows = [{"id": str(i)} for i in range(drive.MAX_SEARCH_RESULTS)]
+        fetch = service.files.return_value.list.return_value.execute
+        fetch.side_effect = [{"files": rows, "nextPageToken": "more"}, {"files": rows[:1]}]
+        with patch.object(drive, "get_all_folder_ids", return_value=folders):
+            self.assertEqual(drive.search_files(service, "name = 'a'"), (rows, False))
+        self.assertEqual(fetch.call_count, 2)
+
+    def test_tool_stops_on_first_extra_unique_match(self):
+        folders = tuple(str(i) for i in range(drive.PARENTS_PER_QUERY * 3))
+        rows = [{"id": str(i)} for i in range(drive.MAX_SEARCH_RESULTS)]
+        with patch.object(tools, "_service") as service, patch.object(
+            drive, "get_all_folder_ids", return_value=folders
+        ):
+            fetch = service.files.return_value.list.return_value.execute
+            fetch.side_effect = [
+                {"files": rows},
+                {"files": [rows[0], {"id": "extra"}], "nextPageToken": "unread"},
+            ]
+            message = tools.drive_search.invoke({
+                "type": "tool_call", "id": "call", "name": "drive_search", "args": {"query": "name = 'a'"}
+            })
+        summary = json.loads(message.content)
+        self.assertTrue(summary["truncated"])
+        self.assertIn("narrow", summary["note"])
+        self.assertEqual(summary["files"], rows)
+        self.assertEqual(message.artifact, rows)
+        self.assertEqual(fetch.call_count, 2)
+
     def test_tool_returns_validation_feedback(self):
         reply = tools.drive_search.invoke({"query": "mimetype = 'x'"})
         self.assertIn("'mimetype'", reply)

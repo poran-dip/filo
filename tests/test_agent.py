@@ -17,7 +17,7 @@ def _list(files, continuation=False, call_id="1"):
 
 
 def _search(files, call_id="1"):
-    return ToolMessage(content=str(files), name="drive_search", tool_call_id=call_id)
+    return ToolMessage(content="{}", artifact=files, name="drive_search", tool_call_id=call_id)
 
 
 class RunAgentTests(unittest.TestCase):
@@ -65,6 +65,18 @@ class RunAgentTests(unittest.TestCase):
     def test_search_after_list_replaces_files(self):
         (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), _search([{"id": "s"}], call_id="2"))
         self.assertEqual(files, [{"id": "s"}])
+
+    def test_empty_or_failed_search_clears_earlier_files(self):
+        for content in ("No files found.", "Invalid search filter: nope. Revise the query and try again."):
+            with self.subTest(content=content):
+                empty = ToolMessage(content=content, name="drive_search", tool_call_id="2", artifact=[])
+                (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), empty)
+                self.assertEqual(files, [])
+
+    def test_prompt_warns_against_superlatives_on_truncated_results(self):
+        prompt = agent.build_system_prompt()
+        self.assertIn('"truncated": true', prompt)
+        self.assertIn("Never claim a newest", prompt)
 
     def test_empty_artifact_from_denied_listing_keeps_earlier_files(self):
         denied = ToolMessage(content="Choose a folder inside the configured root.",
