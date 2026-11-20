@@ -2,9 +2,7 @@
 
 Filo AI is a conversational Drive assistant that finds your files through natural chat. Search by name, type, content, or date — Filo translates your intent into precise Drive API queries and stays focused on your files.
 
-Check it out on [filo-ai.streamlit.app](https://filo-ai.streamlit.app/).
-
-**Note:** The live deployment only has access to a test Drive folder. To use Filo with your own Drive, clone the repo, set up a service account, and configure the `.env` as described below.
+To use Filo with your own Drive, clone the repo, set up a service account, and configure the `.env` as described below.
 
 ## Stack
 
@@ -25,15 +23,18 @@ Check it out on [filo-ai.streamlit.app](https://filo-ai.streamlit.app/).
 ```bash
 filo/
 ├── server/
-│   ├── main.py       # FastAPI app
-│   ├── agent.py      # LangGraph agent + system prompt
-│   ├── tools.py      # drive_search LangChain tool
-│   ├── drive.py      # Google Drive API client
-│   └── config.py     # Server configuration
+│   ├── main.py         # FastAPI app
+│   ├── agent.py        # LangGraph agent + system prompt
+│   ├── tools.py        # drive_search LangChain tool
+│   ├── drive.py        # Google Drive API client
+│   ├── query.py        # Query validator to enforce scope
+│   └── config.py       # Server configuration
 ├── client/
-│   ├── app.py        # Streamlit chat interface
-│   └── config.py     # Client configuration
-├── render.yaml       # Render deployment config
+│   ├── app.py          # Streamlit chat interface
+│   └── config.py       # Client configuration
+├── tests/              # Test suite
+├── eval/               # Agent performance evaluation
+├── render.yaml         # Render deployment config
 ├── requirements.txt
 ├── runtime.txt
 └── .env.example
@@ -53,7 +54,7 @@ filo/
 
 ```bash
 git clone https://github.com/poran-dip/filo.git
-cd drive-chat-agent
+cd filo
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -79,11 +80,11 @@ streamlit run client/app.py
 
 ## Environment Variables
 
-| Variable                      | Description                                                   |
-| ----------------------------- | ------------------------------------------------------------- |
-| `GROQ_API_KEY`                | Your Groq API key                                             |
-| `DRIVE_FOLDER_ID`             | Root Google Drive folder ID to search within                  |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full contents of the service account JSON file (single line)  |
+| Variable                      | Description                                                  |
+| ----------------------------- | ------------------------------------------------------------ |
+| `GROQ_API_KEY`                | Your Groq API key                                            |
+| `DRIVE_FOLDER_ID`             | Root Google Drive folder ID to search within                 |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full contents of the service account JSON file (single line) |
 
 See `.env.example` for reference.
 
@@ -94,38 +95,19 @@ See `.env.example` for reference.
 
 ## Drive agent evaluation
 
-`python eval/run_eval.py` evaluates the real Groq model. It needs `GROQ_API_KEY`; Drive credentials are not
-needed, because Drive is a fixed local folder tree. Groq receives the user conversation and chooses its own
-tool calls, then the production agent graph, tools and card selection run unchanged against the fixture.
-Each of the 23 cases has a user request, reference tool calls, expected file IDs and a note.
+`python eval/run_eval.py` evaluates the real Groq model. It needs `GROQ_API_KEY`; Drive credentials are not needed, because Drive is a fixed local folder tree. Groq receives the user conversation and chooses its own tool calls, then the production agent graph, tools and card selection run unchanged against the fixture. Each of the 23 cases has a user request, reference tool calls, expected file IDs and a note.
 
-A case run passes only if the displayed card IDs match the expected IDs exactly (extra, missing and
-duplicate cards all fail), the model used the expected tools, and every tool result was valid. Reply wording is
-not scored. The runner prints each failing case, the pass rate, and micro recall: unique expected IDs
-retrieved divided by total expected IDs across case runs, with the unexpected-card count beside it.
+A case run passes only if the displayed card IDs match the expected IDs exactly (extra, missing and duplicate cards all fail), the model used the expected tools, and every tool result was valid. Reply wording is not scored. The runner prints each failing case, the pass rate, and micro recall: unique expected IDs retrieved divided by total expected IDs across case runs, with the unexpected-card count beside it.
 
-Model output varies between runs. Use `--runs N` to run each case N times; cases that pass only some
-of the time are listed as `FLAKY`. Provider and network errors are retried (`--retries`, `--backoff`)
-and reported as errors if they persist, and any error fails the run. By default the live run only reports.
-Pass `--min-pass 0.9` (a fraction of case runs) to make it fail below a pass rate. No live score has been
-recorded yet, so choose that threshold after a first real run.
+Model output varies between runs. Use `--runs N` to run each case N times; cases that pass only some of the time are listed as `FLAKY`. Provider and network errors are retried (`--retries`, `--backoff`) and reported as errors if they persist, and any error fails the run. By default the live run only reports. Pass `--min-pass 0.9` (a fraction of case runs) to make it fail below a pass rate. No live score has been recorded yet, so choose that threshold after a first real run.
 
-`python eval/run_eval.py --replay` is a deterministic harness check, not a model evaluation. No model is
-called: each case's reference tool calls are replayed. It verifies the fixture, the tools and card selection,
-so it can catch regressions such as a scope leak or dropped results from parallel searches. It cannot judge
-tool choice or follow-up handling, because the replayed calls come from the case itself. Any failing case fails
-it, and no tolerance is needed because it is deterministic. The fixture has 10 files and 2 folders, so it does
-not exercise pagination, the 20-parent batching, the 100-result cap or deep folder trees. It also
-approximates text matching and uses fixed UTC timestamps.
+`python eval/run_eval.py --replay` is a deterministic harness check, not a model evaluation. No model is called: each case's reference tool calls are replayed. It verifies the fixture, the tools and card selection, so it can catch regressions such as a scope leak or dropped results from parallel searches. It cannot judge tool choice or follow-up handling, because the replayed calls come from the case itself. Any failing case fails it, and no tolerance is needed because it is deterministic. The fixture has 10 files and 2 folders, so it does not exercise pagination, the 20-parent batching, the 100-result cap or deep folder trees. It also approximates text matching and uses fixed UTC timestamps.
 
-| Replay check | Passed |
-| --- | --- |
+| Replay check                               | Passed        |
+| ------------------------------------------ | ------------- |
 | Before the search-result fixes (`09b063c`) | 22/23 (95.7%) |
-| After the search-result fixes (`8ee91a0`) | 23/23 (100%) |
+| After the search-result fixes (`8ee91a0`)  | 23/23 (100%)  |
 
 Before the fixes, parallel calls returning PDFs and images dropped the PDFs.
 
-GitHub Actions runs the replay check as `harness-check` on pull requests and pushes to main in the
-**Drive agent eval** workflow; require it in branch protection to gate merges. The real-model eval runs only
-when you start the workflow manually (`workflow_dispatch`) on a trusted branch, with the repository secret
-`EVAL_GROQ_API_KEY`. It uses Groq quota, and it accepts the `runs` and `min_pass` inputs described above.
+GitHub Actions runs the replay check as `harness-check` on pushes to main in the **Drive agent eval** workflow; require it in branch protection to gate merges. The real-model eval runs only when you start the workflow manually (`workflow_dispatch`) on a trusted branch, with the repository secret `EVAL_GROQ_API_KEY`. It uses Groq quota, and it accepts the `runs` and `min_pass` inputs described above.
