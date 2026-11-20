@@ -74,19 +74,21 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
 
     search_hits = {}
     listing = []
-    show_search = False
+    displayed = listing
     for msg in all_messages:
-        if getattr(msg, "name", None) == "drive_list":
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            # Parallel calls share this accumulator until the next tool-call round.
+            search_hits = {}
+        elif getattr(msg, "name", None) == "drive_list":
             page = getattr(msg, "artifact", None)
             if page:
                 if not page["continuation"]:
                     listing = []
                 listing.extend(page["files"])
-                show_search = False
+                displayed = listing
         elif getattr(msg, "name", None) == "drive_search":
             for file in msg.artifact or []:
                 search_hits[file["id"]] = file
-            show_search = True
+            displayed = search_hits.values()
 
-    files = list(search_hits.values()) if show_search else listing
-    return ai_reply, files
+    return ai_reply, list(displayed)
