@@ -1,0 +1,12 @@
+[
+  {"id":"work","parent":"root","name":"work","mimeType":"application/vnd.google-apps.folder"},
+  {"id":"art","parent":"root","name":"art","mimeType":"application/vnd.google-apps.folder"},
+  {"id":"notes","parent":"root","name":"notes.txt","mimeType":"text/plain","fullText":"agenda kickoff"},
+  {"id":"invoice","parent":"work","name":"invoice.pdf","mimeType":"application/pdf","fullText":"billing acme","modifiedTime":"2025-03-15T12:00:00Z"},
+  {"id":"report","parent":"work","name":"report.pdf","mimeType":"application/pdf","fullText":"quarterly review","modifiedTime":"2024-09-12T12:00:00Z"},
+  {"id":"budget","parent":"work","name":"budget.csv","mimeType":"text/csv","fullText":"forecast"},
+  {"id":"logo","parent":"art","name":"logo.png","mimeType":"image/png"},
+  {"id":"cover","parent":"art","name":"cover.jpg","mimeType":"image/jpeg"},
+  {"id":"hidden","parent":"elsewhere","name":"invoice.pdf","mimeType":"application/pdf"},
+  {"id":"deleted","parent":"work","name":"report.pdf","mimeType":"application/pdf","trashed":true}
+]

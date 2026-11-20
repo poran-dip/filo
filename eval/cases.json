@@ -1,0 +1,412 @@
+[
+  {
+    "message": "find every pdf",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice",
+      "report"
+    ],
+    "note": "Includes nested files and excludes deleted and out-of-scope copies."
+  },
+  {
+    "message": "show me png files",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'image/png'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "logo"
+    ],
+    "note": "Image subtype."
+  },
+  {
+    "message": "any jpeg files?",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'image/jpeg'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "cover"
+    ],
+    "note": "JPEG extension and MIME type differ."
+  },
+  {
+    "message": "find all images",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType contains 'image/'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "logo",
+      "cover"
+    ],
+    "note": "Multiple image subtypes."
+  },
+  {
+    "message": "find csv files",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'text/csv'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "budget"
+    ],
+    "note": "Non-native spreadsheet format."
+  },
+  {
+    "message": "find plain text files",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'text/plain'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "notes"
+    ],
+    "note": "Root-level file."
+  },
+  {
+    "message": "find the exact filename report.pdf",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "name = 'report.pdf'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "report"
+    ],
+    "note": "Trashed duplicate excluded."
+  },
+  {
+    "message": "find the exact filename invoice.pdf",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "name = 'invoice.pdf'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice"
+    ],
+    "note": "Outside-root duplicate excluded."
+  },
+  {
+    "message": "find files whose names start with bud",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "name contains 'bud'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "budget"
+    ],
+    "note": "Filename prefix."
+  },
+  {
+    "message": "find files containing the word kickoff",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "fullText contains 'kickoff'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "notes"
+    ],
+    "note": "Body-only keyword."
+  },
+  {
+    "message": "which file mentions acme?",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "fullText contains 'acme'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice"
+    ],
+    "note": "Company mentioned only in body."
+  },
+  {
+    "message": "search for a file mentioning forecast",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "fullText contains 'forecast'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "budget"
+    ],
+    "note": "Body keyword in CSV."
+  },
+  {
+    "message": "find pdfs modified after january 1, 2025",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf' and modifiedTime > '2025-01-01T00:00:00Z'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice"
+    ],
+    "note": "Date and type intersection."
+  },
+  {
+    "message": "find pdfs modified before january 1, 2025",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf' and modifiedTime < '2025-01-01T00:00:00Z'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "report"
+    ],
+    "note": "Upper date bound."
+  },
+  {
+    "message": "find pdfs mentioning quarterly",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf' and fullText contains 'quarterly'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "report"
+    ],
+    "note": "Body and type intersection."
+  },
+  {
+    "message": "find the exact filename missing.zip",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "name = 'missing.zip'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [],
+    "note": "A genuine search with zero hits."
+  },
+  {
+    "message": "list the folders at the root",
+    "rounds": [
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "kind": "folders"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "work",
+      "art"
+    ],
+    "note": "Browse folders only."
+  },
+  {
+    "message": "list only files directly in the root",
+    "rounds": [
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "kind": "files"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "notes"
+    ],
+    "note": "Exclude descendants and folder entries."
+  },
+  {
+    "message": "what's inside the work folder?",
+    "rounds": [
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "kind": "folders"
+          }
+        }
+      ],
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "folder_id": "work"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice",
+      "report",
+      "budget"
+    ],
+    "note": "Navigate then replace root cards."
+  },
+  {
+    "message": "what's inside the art folder?",
+    "rounds": [
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "kind": "folders"
+          }
+        }
+      ],
+      [
+        {
+          "name": "drive_list",
+          "args": {
+            "folder_id": "art"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "cover",
+      "logo"
+    ],
+    "note": "Sibling folder navigation."
+  },
+  {
+    "message": "find both pdfs and images",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf'"
+          }
+        },
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType contains 'image/'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "invoice",
+      "report",
+      "cover",
+      "logo"
+    ],
+    "note": "Union parallel calls or use an equivalent composite query."
+  },
+  {
+    "message": "actually, only the one mentioning quarterly",
+    "rounds": [
+      [
+        {
+          "name": "drive_search",
+          "args": {
+            "query": "mimeType = 'application/pdf' and fullText contains 'quarterly'"
+          }
+        }
+      ]
+    ],
+    "expected_ids": [
+      "report"
+    ],
+    "note": "Use the previous user request to resolve the type.",
+    "previous_message": "find every pdf"
+  },
+  {
+    "message": "thanks!",
+    "rounds": [],
+    "expected_ids": [],
+    "note": "Acknowledgement needs no tool."
+  }
+]

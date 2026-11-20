@@ -91,3 +91,32 @@ See `.env.example` for reference.
 
 - **Backend** — Render (configured via `render.yaml`). Set the three env vars in the Render dashboard.
 - **Frontend** — Streamlit Community Cloud. Connect the GitHub repo, set main file to `client/app.py`, and add `BACKEND_URL` pointing to your Render service URL in the app secrets.
+
+## Drive agent evaluation
+
+Run `python eval/run_eval.py` after installing the project requirements. The runner
+exercises the production agent graph, tools and displayed file IDs against a fixed
+local folder tree. Each of the 23 cases includes a user request, reference tool
+calls, expected IDs and a note. The runner prints failures and the overall pass
+rate, and exits nonzero if any case fails.
+
+| Scripted tool-call replay | Passed |
+| --- | --- |
+| Post-P1 baseline (`09b063c`) | 22/23 (95.7%) |
+| After the search-result fixes (`8ee91a0`) | 23/23 (100%) |
+
+The baseline dropped the PDFs when parallel calls returned PDFs and images.
+Replay supplies model responses, so its score measures tool execution and card
+selection. GitHub Actions runs it on pull requests and pushes to main as part of
+the existing `unittest` check. Require that check in branch protection to gate merges.
+
+To measure natural-language tool selection, set `GROQ_API_KEY` and run
+`python eval/run_eval.py --live`. Groq receives the user conversation and chooses
+its own calls against the same synthetic fixture. The grader checks tool selection
+and the exact displayed IDs (including unexpected duplicates). Reply wording is
+unscored. The fixture approximates text matching and uses fixed UTC timestamps;
+neither mode requires Drive credentials. No live score has been recorded here.
+
+For a pre-merge live run, configure the repository secret `EVAL_GROQ_API_KEY` and
+manually run the **tests** workflow on the trusted branch to review. The live job
+uses Groq quota and reports model or provider errors as failed cases.
