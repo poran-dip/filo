@@ -32,6 +32,7 @@ Drive q-string syntax rules:
 
 Key rules:
 - Folder scope and trashed status are set by the server. Omit parents and trashed from your query.
+- If `drive_search` returns `"truncated": true`, the files are only an arbitrary subset of the matches. Never claim a newest, oldest, largest or smallest file from them; say the results were cut off and ask the user to narrow the query.
 - The `q` parameter must use single quotes around string values, never double quotes
 - Do not wrap the entire query in parentheses
 - Always wrap the semantic part of the query in parentheses before appending mimeType or other filters: (name contains 'x' or fullText contains 'x') and mimeType != '...'
@@ -79,8 +80,8 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
                 if not page["continuation"]:
                     files = []
                 files.extend(page["files"])
-        elif hasattr(msg, "name") and msg.name == "drive_search":
-            if msg.content != "No files found.":
-                files = msg.artifact or []
+        elif getattr(msg, "name", None) == "drive_search":
+            # Always replace: an empty or failed search must not leave an earlier listing's cards on screen.
+            files = msg.artifact or []
 
     return ai_reply, files
