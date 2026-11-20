@@ -2,6 +2,7 @@ import time
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from server.config import DRIVE_FOLDER_ID, SERVICE_ACCOUNT_INFO
+from server.query import validate_query
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
@@ -44,6 +45,7 @@ def get_all_folder_ids(service, root_folder_id: str) -> dict[str, str]:
 
 
 def search_files(service, query: str) -> list[dict]:
+    validate_query(query)
     folder_map = get_all_folder_ids(service, DRIVE_FOLDER_ID)
 
     parent_clause = " or ".join(f"'{fid}' in parents" for fid in folder_map.values())
