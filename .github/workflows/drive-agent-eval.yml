@@ -39,4 +39,4 @@ jobs:
           GROQ_API_KEY: ${{ secrets.EVAL_GROQ_API_KEY }}
           RUNS: ${{ inputs.runs }}
           MIN_PASS: ${{ inputs.min_pass }}
-        run: python eval/run_eval.py --runs "$RUNS" ${MIN_PASS:+--min-pass "$MIN_PASS"}
+        run: python -u eval/run_eval.py --runs "$RUNS" ${MIN_PASS:+--min-pass "$MIN_PASS"}
