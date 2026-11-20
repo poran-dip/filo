@@ -21,7 +21,9 @@ CASE = {"expected_ids": ["a", "b"], "rounds": [[{"name": "drive_search", "args":
 
 class GradeTests(unittest.TestCase):
     def test_exact_match_passes(self):
-        self.assertEqual(run_eval.grade(CASE, ["b", "a"], [_result()], live=True), (True, []))
+        self.assertEqual(
+            run_eval.grade(CASE, ["b", "a"], [_result()], live=True), (True, [])
+        )
 
     def test_extra_missing_and_duplicate_cards_fail(self):
         for ids in (["a", "b", "c"], ["a"], ["a", "a", "b"]):
@@ -36,7 +38,10 @@ class GradeTests(unittest.TestCase):
         self.assertTrue(run_eval.grade(CASE, ["a", "b"], trace, live=False)[0])
 
     def test_invalid_tool_results_fail_even_with_right_cards(self):
-        for bad in (_result(content="Invalid search filter: nope."), _result(status="error")):
+        for bad in (
+            _result(content="Invalid search filter: nope."),
+            _result(status="error"),
+        ):
             with self.subTest(content=bad.content, status=bad.status):
                 ok, problems = run_eval.grade(CASE, ["a", "b"], [bad], live=False)
                 self.assertFalse(ok)
@@ -44,34 +49,60 @@ class GradeTests(unittest.TestCase):
 
     def test_zero_hit_case_needs_a_real_search(self):
         case = {"expected_ids": [], "rounds": [[{"name": "drive_search", "args": {}}]]}
-        self.assertTrue(run_eval.grade(case, [], [_result(content="No files found.")], live=True)[0])
-        self.assertFalse(run_eval.grade(case, [], [_result(content="Invalid search filter: x")], live=True)[0])
+        self.assertTrue(
+            run_eval.grade(case, [], [_result(content="No files found.")], live=True)[0]
+        )
+        self.assertFalse(
+            run_eval.grade(
+                case, [], [_result(content="Invalid search filter: x")], live=True
+            )[0]
+        )
 
     def test_no_tool_case_fails_if_a_tool_is_used(self):
         case = {"expected_ids": [], "rounds": []}
         self.assertTrue(run_eval.grade(case, [], [], live=True)[0])
-        self.assertFalse(run_eval.grade(case, [], [_result(content="No files found.")], live=True)[0])
+        self.assertFalse(
+            run_eval.grade(case, [], [_result(content="No files found.")], live=True)[0]
+        )
 
 
 class ExitCodeTests(unittest.TestCase):
     def stats(self, **overrides):
-        return {"runs": 10, "passed": 10, "errors": 0, "expected_total": 20, **overrides}
+        return {
+            "runs": 10,
+            "passed": 10,
+            "errors": 0,
+            "expected_total": 20,
+            **overrides,
+        }
 
     def test_replay_fails_on_any_exact_case_failure(self):
         self.assertEqual(run_eval.exit_code(self.stats(), live=False, min_pass=None), 0)
-        self.assertEqual(run_eval.exit_code(self.stats(passed=9), live=False, min_pass=None), 1)
+        self.assertEqual(
+            run_eval.exit_code(self.stats(passed=9), live=False, min_pass=None), 1
+        )
 
     def test_live_is_report_only_unless_min_pass_is_given(self):
         low = self.stats(passed=5)
         self.assertEqual(run_eval.exit_code(low, live=True, min_pass=None), 0)
         self.assertEqual(run_eval.exit_code(low, live=True, min_pass=0.9), 1)
-        self.assertEqual(run_eval.exit_code(self.stats(passed=9), live=True, min_pass=0.9), 0)
+        self.assertEqual(
+            run_eval.exit_code(self.stats(passed=9), live=True, min_pass=0.9), 0
+        )
 
     def test_errors_and_empty_expectations_always_fail(self):
         for live in (True, False):
             with self.subTest(live=live):
-                self.assertEqual(run_eval.exit_code(self.stats(errors=1), live=live, min_pass=None), 1)
-                self.assertEqual(run_eval.exit_code(self.stats(expected_total=0), live=live, min_pass=None), 1)
+                self.assertEqual(
+                    run_eval.exit_code(self.stats(errors=1), live=live, min_pass=None),
+                    1,
+                )
+                self.assertEqual(
+                    run_eval.exit_code(
+                        self.stats(expected_total=0), live=live, min_pass=None
+                    ),
+                    1,
+                )
 
 
 class AttemptTests(unittest.TestCase):
@@ -84,8 +115,13 @@ class AttemptTests(unittest.TestCase):
                 raise RuntimeError("rate limited")
             return "ok"
 
-        result = run_eval.attempt(flaky, retries=2, backoff=5, sleep=sleeps.append,
-                                  on_retry=lambda n, exc: retried.append(n))
+        result = run_eval.attempt(
+            flaky,
+            retries=2,
+            backoff=5,
+            sleep=sleeps.append,
+            on_retry=lambda n, exc: retried.append(n),
+        )
         self.assertEqual((result, sleeps, retried), ("ok", [5, 10], [1, 2]))
 
     def test_raises_after_retries_are_exhausted(self):
@@ -114,8 +150,14 @@ class AttemptTests(unittest.TestCase):
 class RunnerTests(unittest.TestCase):
     def _run(self, *args):
         env = {k: v for k, v in os.environ.items() if k != "GROQ_API_KEY"}
-        return subprocess.run([sys.executable, str(ROOT / "eval" / "run_eval.py"), *args],
-                              check=False, capture_output=True, text=True, cwd=ROOT, env=env)
+        return subprocess.run(
+            [sys.executable, str(ROOT / "eval" / "run_eval.py"), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            env=env,
+        )
 
     def test_replay_of_the_committed_suite_passes_exactly(self):
         done = self._run("--replay")

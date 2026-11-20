@@ -18,8 +18,7 @@ CACHE_TTL = 60  # seconds
 
 def get_drive_service():
     creds = service_account.Credentials.from_service_account_info(
-        SERVICE_ACCOUNT_INFO,
-        scopes=SCOPES
+        SERVICE_ACCOUNT_INFO, scopes=SCOPES
     )
 
     return build("drive", "v3", credentials=creds)
@@ -28,9 +27,15 @@ def get_drive_service():
 def _iter_files(service, query: str, fields: str):
     token = None
     while True:
-        page = service.files().list(
-            q=query, fields=f"nextPageToken,files({fields})", pageToken=token,
-        ).execute()
+        page = (
+            service.files()
+            .list(
+                q=query,
+                fields=f"nextPageToken,files({fields})",
+                pageToken=token,
+            )
+            .execute()
+        )
         yield from page.get("files", [])
         token = page.get("nextPageToken")
         if not token:
@@ -51,8 +56,10 @@ def get_all_folder_ids(service, root_folder_id: str) -> tuple[str, ...]:
     while pending:
         current = pending.pop()
         folder_ids.append(current)
-        query = (f"'{current}' in parents and mimeType = 'application/vnd.google-apps.folder'"
-                 " and trashed = false")
+        query = (
+            f"'{current}' in parents and mimeType = 'application/vnd.google-apps.folder'"
+            " and trashed = false"
+        )
         for folder in _iter_files(service, query, "id"):
             child = folder["id"]
             if child not in seen:
@@ -72,7 +79,9 @@ def search_files(service, query: str) -> tuple[list[dict], bool]:
     for batch in batched(folder_ids, PARENTS_PER_QUERY):
         parents = " or ".join(f"'{fid}' in parents" for fid in batch)
         scoped_query = f"({parents}) and ({query}) and trashed = false"
-        for file in _iter_files(service, scoped_query, "id,name,mimeType,size,modifiedTime,webViewLink"):
+        for file in _iter_files(
+            service, scoped_query, "id,name,mimeType,size,modifiedTime,webViewLink"
+        ):
             if len(files_by_id) == MAX_SEARCH_RESULTS and file["id"] not in files_by_id:
                 return list(files_by_id.values()), True
             files_by_id[file["id"]] = file

@@ -25,4 +25,7 @@ async def chat(body: ChatRequest):
             "files": files,
         }
     except RateLimitError:
-        return {"response": "I'm currently rate limited — please try again in a few minutes.", "files": []}
+        return {
+            "response": "I'm currently rate limited — please try again in a few minutes.",
+            "files": [],
+        }
