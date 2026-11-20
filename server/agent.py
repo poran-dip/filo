@@ -72,16 +72,21 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
 
     ai_reply = all_messages[-1].content
 
-    files = []
+    search_hits = {}
+    listing = []
+    show_search = False
     for msg in all_messages:
         if getattr(msg, "name", None) == "drive_list":
             page = getattr(msg, "artifact", None)
             if page:
                 if not page["continuation"]:
-                    files = []
-                files.extend(page["files"])
+                    listing = []
+                listing.extend(page["files"])
+                show_search = False
         elif getattr(msg, "name", None) == "drive_search":
-            # Always replace: an empty or failed search must not leave an earlier listing's cards on screen.
-            files = msg.artifact or []
+            for file in msg.artifact or []:
+                search_hits[file["id"]] = file
+            show_search = True
 
+    files = list(search_hits.values()) if show_search else listing
     return ai_reply, files

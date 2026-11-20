@@ -66,6 +66,24 @@ class RunAgentTests(unittest.TestCase):
         (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), _search([{"id": "s"}], call_id="2"))
         self.assertEqual(files, [{"id": "s"}])
 
+    def test_search_calls_merge_by_id_across_navigation(self):
+        updated = {"id": "a", "name": "renamed", "webViewLink": "https://example.com/a"}
+        (_, files), _ = self._run(
+            _search([{"id": "a"}, {"id": "b"}], call_id="1"),
+            _list([{"id": "folder"}], call_id="2"),
+            _search([{"id": "c"}, updated], call_id="3"),
+            _search([], call_id="4"),
+        )
+        self.assertEqual(files, [updated, {"id": "b"}, {"id": "c"}])
+
+    def test_listing_continuation_after_search_shows_only_listing(self):
+        (_, files), _ = self._run(
+            _list([{"id": "a"}], call_id="1"),
+            _search([{"id": "s"}], call_id="2"),
+            _list([{"id": "b"}], continuation=True, call_id="3"),
+        )
+        self.assertEqual(files, [{"id": "a"}, {"id": "b"}])
+
     def test_empty_or_failed_search_clears_earlier_files(self):
         for content in ("No files found.", "Invalid search filter: nope. Revise the query and try again."):
             with self.subTest(content=content):
