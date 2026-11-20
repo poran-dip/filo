@@ -115,7 +115,7 @@ class RunnerTests(unittest.TestCase):
     def _run(self, *args):
         env = {k: v for k, v in os.environ.items() if k != "GROQ_API_KEY"}
         return subprocess.run([sys.executable, str(ROOT / "eval" / "run_eval.py"), *args],
-                              capture_output=True, text=True, cwd=ROOT, env=env)
+                              check=False, capture_output=True, text=True, cwd=ROOT, env=env)
 
     def test_replay_of_the_committed_suite_passes_exactly(self):
         done = self._run("--replay")

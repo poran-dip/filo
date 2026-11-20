@@ -9,10 +9,10 @@ harness, the tools and card selection. It is deterministic and is the one mode t
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
 import time
 from contextlib import nullcontext
+from pathlib import Path
 from unittest.mock import patch
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -120,7 +120,10 @@ def main(argv=None):
     if not live:
         print("Scripted replay: no model is called. This checks the harness, tools and card selection only.")
     by_message = {case["message"]: case for case in cases}
-    stats = dict(runs=0, passed=0, errors=0, retries=0, retrieved=0, expected_total=0, extra_cards=0)
+    stats = {
+        "runs": 0, "passed": 0, "errors": 0, "retries": 0,
+        "retrieved": 0, "expected_total": 0, "extra_cards": 0,
+    }
     passes = {case["message"]: 0 for case in cases}
 
     def note_retry(n, exc):
@@ -140,9 +143,9 @@ def main(argv=None):
             stats["runs"] += 1
             stats["expected_total"] += len(expected_ids)
             try:
-                _, ids, trace = attempt(lambda: one_turn(case), args.retries if live else 0,
+                _, ids, trace = attempt(lambda case=case: one_turn(case), args.retries if live else 0,
                                         args.backoff, on_retry=note_retry)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - record each case failure and finish the suite
                 stats["errors"] += 1
                 message = str(exc).replace(key, "***") if key else str(exc)
                 print(f"ERROR {case['message']} | {type(exc).__name__}: {message[:300]}")

@@ -1,10 +1,12 @@
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import requests
 import streamlit as st
-from client.config import BACKEND_URL
 
+from client.config import BACKEND_URL
 
 st.set_page_config(page_title="Filo", page_icon="🗂️")
 st.title("🗂️ Filo")
@@ -95,7 +97,7 @@ if user_input:
             )
             res.raise_for_status()
             data = res.json()
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             print(f"[error] {type(e).__name__}: {e}")
             st.error("Something went wrong. Please try again.")
             st.session_state.messages.pop()

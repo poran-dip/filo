@@ -1,7 +1,9 @@
 import time
 from itertools import batched
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+
 from server.config import DRIVE_FOLDER_ID, SERVICE_ACCOUNT_INFO
 from server.query import validate_query
 

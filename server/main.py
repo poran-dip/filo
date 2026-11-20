@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from groq import RateLimitError
 from pydantic import BaseModel
+
 from server.agent import run_agent
 
 app = FastAPI()
