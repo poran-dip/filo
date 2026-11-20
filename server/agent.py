@@ -3,18 +3,17 @@ from datetime import date
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
-from server.config import DRIVE_FOLDER_ID
-from server.drive import get_drive_service, get_all_folder_ids
-from server.tools import drive_search
+from server.tools import drive_list, drive_search
 
-_service = get_drive_service()
-_folder_map = get_all_folder_ids(_service, DRIVE_FOLDER_ID)
-_folder_list = "\n".join(f"  - {name} (id: {fid})" for name, fid in _folder_map.items() if name != "root")
 
-SYSTEM_PROMPT = f"""You are Filo, a friendly and efficient Google Drive file assistant.
+def build_system_prompt() -> str:
+    return f"""You are Filo, a friendly and efficient Google Drive file assistant.
 Today's date is {date.today().isoformat()}.
 
-Call `drive_search` whenever the user intent is to find, identify, retrieve, or explore files or their contents, even if the request is implicit or conversational
+Use `drive_list` to browse a folder. Start at the configured root, then use returned folder IDs to navigate.
+For a complete listing, follow nextPageToken until it is absent.
+Listings include modifiedTime and size, so questions like newest or largest can be answered from them, but only once every page has been read. Google-native files (Docs, Sheets) have no size.
+Use `drive_search` to find files by keyword, type or date.
 Translate their natural language request into a valid Google Drive API `q` parameter string.
 
 Drive q-string syntax rules:
@@ -32,10 +31,8 @@ Drive q-string syntax rules:
                       e.g. (name contains 'invoice' or fullText contains 'invoice') and mimeType = 'application/pdf'
                       e.g. not mimeType = 'application/pdf'
 
-Available folders in this Drive:
-{_folder_list}
-
 Key rules:
+- Folder scope and trashed status are set by the server. Omit parents and trashed from your query.
 - The `q` parameter must use single quotes around string values, never double quotes
 - Do not wrap the entire query in parentheses
 - Always wrap the semantic part of the query in parentheses before appending mimeType or other filters: (name contains 'x' or fullText contains 'x') and mimeType != '...'
@@ -54,8 +51,7 @@ llm = ChatGroq(model="llama-3.3-70b-versatile")
 
 graph = create_agent(
     model=llm,
-    tools=[drive_search],
-    system_prompt=SystemMessage(content=SYSTEM_PROMPT),
+    tools=[drive_search, drive_list],
 )
 
 
@@ -64,7 +60,7 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
     messages: list of {"role": "user"|"assistant", "content": "..."}
     Returns (assistant_text_reply, list_of_file_dicts_or_empty)
     """
-    history = []
+    history = [SystemMessage(content=build_system_prompt())]
     for m in messages[-6:]:
         if m["role"] == "user":
             history.append(HumanMessage(content=m["content"]))
@@ -78,7 +74,13 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
 
     files = []
     for msg in all_messages:
-        if hasattr(msg, "name") and msg.name == "drive_search":
+        if getattr(msg, "name", None) == "drive_list":
+            page = getattr(msg, "artifact", None)
+            if page:
+                if not page["continuation"]:
+                    files = []
+                files.extend(page["files"])
+        elif hasattr(msg, "name") and msg.name == "drive_search":
             if msg.content != "No files found.":
                 try:
                     files = ast.literal_eval(msg.content)
