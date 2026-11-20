@@ -7,8 +7,14 @@ from googleapiclient.errors import HttpError
 from httplib2 import Response
 
 # Supply inert settings and replace the import-time credentialed client.
-with patch.dict(os.environ, GROQ_API_KEY="test", DRIVE_FOLDER_ID="root", GOOGLE_SERVICE_ACCOUNT_JSON="{}"):
+with patch.dict(
+    os.environ,
+    GROQ_API_KEY="test",
+    DRIVE_FOLDER_ID="root",
+    GOOGLE_SERVICE_ACCOUNT_JSON="{}",
+):
     from server import drive
+
     with patch.object(drive, "get_drive_service"):
         from server import tools
 
@@ -27,7 +33,10 @@ class DriveSearchTests(unittest.TestCase):
         service = Mock()
         api_list = service.files.return_value.list
         pages = {
-            ("root", None): {"files": [{"id": "a", "name": "notes"}], "nextPageToken": "more"},
+            ("root", None): {
+                "files": [{"id": "a", "name": "notes"}],
+                "nextPageToken": "more",
+            },
             ("root", "more"): {"files": [{"id": "b", "name": "notes"}]},
             ("b", None): {"files": [{"id": "nested"}]},
             ("nested", None): {},
@@ -67,7 +76,9 @@ class DriveSearchTests(unittest.TestCase):
             strict=True,
         ):
             parents = " or ".join(f"'{fid}' in parents" for fid in batch)
-            self.assertEqual(call.kwargs["q"], f"({parents}) and ({query}) and trashed = false")
+            self.assertEqual(
+                call.kwargs["q"], f"({parents}) and ({query}) and trashed = false"
+            )
             self.assertEqual(call.kwargs["pageToken"], token)
             self.assertIn("nextPageToken", call.kwargs["fields"])
 
@@ -75,11 +86,19 @@ class DriveSearchTests(unittest.TestCase):
     def test_expiry_refreshes_tree_and_breaks_cycles(self):
         service = Mock()
         fetch = service.files.return_value.list.return_value.execute
-        fetch.side_effect = [{"files": [{"id": "child"}]}, {"files": [{"id": "root"}]}, {}]
+        fetch.side_effect = [
+            {"files": [{"id": "child"}]},
+            {"files": [{"id": "root"}]},
+            {},
+        ]
         with patch.object(drive.time, "monotonic", return_value=0) as clock:
-            self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root", "child"))
+            self.assertEqual(
+                drive.get_all_folder_ids(service, "root"), ("root", "child")
+            )
             clock.return_value = drive.CACHE_TTL - 1
-            self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root", "child"))
+            self.assertEqual(
+                drive.get_all_folder_ids(service, "root"), ("root", "child")
+            )
             clock.return_value = drive.CACHE_TTL
             self.assertEqual(drive.get_all_folder_ids(service, "root"), ("root",))
         self.assertEqual(fetch.call_count, 3)
@@ -96,7 +115,10 @@ class DriveSearchTests(unittest.TestCase):
         folders = tuple(str(i) for i in range(drive.PARENTS_PER_QUERY))
         rows = [{"id": str(i)} for i in range(drive.MAX_SEARCH_RESULTS)]
         fetch = service.files.return_value.list.return_value.execute
-        fetch.side_effect = [{"files": rows, "nextPageToken": "more"}, {"files": rows[:1]}]
+        fetch.side_effect = [
+            {"files": rows, "nextPageToken": "more"},
+            {"files": rows[:1]},
+        ]
         with patch.object(drive, "get_all_folder_ids", return_value=folders):
             self.assertEqual(drive.search_files(service, "name = 'a'"), (rows, False))
         self.assertEqual(fetch.call_count, 2)
@@ -112,9 +134,14 @@ class DriveSearchTests(unittest.TestCase):
                 {"files": rows},
                 {"files": [rows[0], {"id": "extra"}], "nextPageToken": "unread"},
             ]
-            message = tools.drive_search.invoke({
-                "type": "tool_call", "id": "call", "name": "drive_search", "args": {"query": "name = 'a'"}
-            })
+            message = tools.drive_search.invoke(
+                {
+                    "type": "tool_call",
+                    "id": "call",
+                    "name": "drive_search",
+                    "args": {"query": "name = 'a'"},
+                }
+            )
         summary = json.loads(message.content)
         self.assertTrue(summary["truncated"])
         self.assertIn("narrow", summary["note"])
@@ -129,10 +156,21 @@ class DriveSearchTests(unittest.TestCase):
 
     def test_tool_handles_bad_request_and_propagates_other_errors(self):
         for status in (400, 403):
-            error = HttpError(Response({"status": status}), json.dumps({
-                "error": {"message": "invalid timestamp" if status == 400 else "forbidden"}
-            }).encode())
-            with self.subTest(status=status), patch.object(tools, "search_files", side_effect=error):
+            error = HttpError(
+                Response({"status": status}),
+                json.dumps(
+                    {
+                        "error": {
+                            "message": (
+                                "invalid timestamp" if status == 400 else "forbidden"
+                            )
+                        }
+                    }
+                ).encode(),
+            )
+            with self.subTest(status=status), patch.object(
+                tools, "search_files", side_effect=error
+            ):
                 args = {"query": "modifiedTime > 'yesterday'"}
                 if status == 400:
                     self.assertIn("invalid timestamp", tools.drive_search.invoke(args))
@@ -146,75 +184,116 @@ class DriveListTests(unittest.TestCase):
         with patch.object(tools, "_service") as service:
             api = service.files.return_value
             page = {
-                "files": [{
-                    "id": "a", "name": "notes", "mimeType": "text/plain",
-                    "size": "10", "modifiedTime": "2024-01-01T00:00:00Z", "webViewLink": "https://x",
-                }],
+                "files": [
+                    {
+                        "id": "a",
+                        "name": "notes",
+                        "mimeType": "text/plain",
+                        "size": "10",
+                        "modifiedTime": "2024-01-01T00:00:00Z",
+                        "webViewLink": "https://x",
+                    }
+                ],
                 "nextPageToken": "next",
             }
             api.list.return_value.execute.return_value = page
-            message = tools.drive_list.invoke({
-                "type": "tool_call", "id": "call", "name": "drive_list", "args": {}
-            })
+            message = tools.drive_list.invoke(
+                {"type": "tool_call", "id": "call", "name": "drive_list", "args": {}}
+            )
             # The model sees what it needs to navigate and compare (no webViewLink)...
-            self.assertEqual(json.loads(message.content), {
-                "files": [{
-                    "id": "a", "name": "notes", "mimeType": "text/plain",
-                    "modifiedTime": "2024-01-01T00:00:00Z", "size": "10",
-                }],
-                "nextPageToken": "next",
-            })
+            self.assertEqual(
+                json.loads(message.content),
+                {
+                    "files": [
+                        {
+                            "id": "a",
+                            "name": "notes",
+                            "mimeType": "text/plain",
+                            "modifiedTime": "2024-01-01T00:00:00Z",
+                            "size": "10",
+                        }
+                    ],
+                    "nextPageToken": "next",
+                },
+            )
             # ...while the UI artifact keeps the full metadata.
             self.assertEqual(message.artifact["files"], page["files"])
             self.assertFalse(message.artifact["continuation"])
             api.get.assert_not_called()
-            self.assertEqual(api.list.call_args.kwargs["q"], "'root' in parents and trashed = false")
+            self.assertEqual(
+                api.list.call_args.kwargs["q"], "'root' in parents and trashed = false"
+            )
 
     def test_scoped_folder_and_page(self):
         with patch.object(tools, "_service") as service:
             api = service.files.return_value
             api.get.return_value.execute.return_value = {
-                "id": "child", "mimeType": "application/vnd.google-apps.folder", "parents": ["root"]
+                "id": "child",
+                "mimeType": "application/vnd.google-apps.folder",
+                "parents": ["root"],
             }
             api.list.return_value.execute.return_value = {"files": []}
-            tools.drive_list.invoke({"folder_id": "child", "kind": "folders", "page_token": "next"})
+            tools.drive_list.invoke(
+                {"folder_id": "child", "kind": "folders", "page_token": "next"}
+            )
             params = api.list.call_args.kwargs
             self.assertEqual(params["pageToken"], "next")
-            self.assertIn("mimeType = 'application/vnd.google-apps.folder'", params["q"])
+            self.assertIn(
+                "mimeType = 'application/vnd.google-apps.folder'", params["q"]
+            )
 
     def test_denies_unrelated_folder(self):
         with patch.object(tools, "_service") as service:
             api = service.files.return_value
             api.get.return_value.execute.return_value = {
-                "id": "outside", "mimeType": "application/vnd.google-apps.folder"
+                "id": "outside",
+                "mimeType": "application/vnd.google-apps.folder",
             }
             tools.drive_list.invoke({"folder_id": "outside", "kind": "files"})
             api.list.assert_not_called()
 
     def test_model_can_compare_files_by_date_and_size(self):
         files = [
-            {"id": "a", "name": "old", "mimeType": "text/plain", "size": "5",
-             "modifiedTime": "2023-01-01T00:00:00Z", "webViewLink": "https://x/a"},
-            {"id": "b", "name": "doc", "mimeType": "application/vnd.google-apps.document",
-             "modifiedTime": "2024-06-01T00:00:00Z", "webViewLink": "https://x/b"},
+            {
+                "id": "a",
+                "name": "old",
+                "mimeType": "text/plain",
+                "size": "5",
+                "modifiedTime": "2023-01-01T00:00:00Z",
+                "webViewLink": "https://x/a",
+            },
+            {
+                "id": "b",
+                "name": "doc",
+                "mimeType": "application/vnd.google-apps.document",
+                "modifiedTime": "2024-06-01T00:00:00Z",
+                "webViewLink": "https://x/b",
+            },
         ]
         with patch.object(tools, "_service") as service:
-            service.files.return_value.list.return_value.execute.return_value = {"files": files}
-            message = tools.drive_list.invoke({
-                "type": "tool_call", "id": "call", "name": "drive_list", "args": {}
-            })
+            service.files.return_value.list.return_value.execute.return_value = {
+                "files": files
+            }
+            message = tools.drive_list.invoke(
+                {"type": "tool_call", "id": "call", "name": "drive_list", "args": {}}
+            )
         seen = json.loads(message.content)["files"]
-        self.assertEqual([f["modifiedTime"] for f in seen], ["2023-01-01T00:00:00Z", "2024-06-01T00:00:00Z"])
+        self.assertEqual(
+            [f["modifiedTime"] for f in seen],
+            ["2023-01-01T00:00:00Z", "2024-06-01T00:00:00Z"],
+        )
         self.assertEqual(seen[0]["size"], "5")
         self.assertNotIn("size", seen[1])  # absent for Google-native files, not null
         self.assertNotIn("webViewLink", message.content)
 
     def test_last_page_omits_next_page_token(self):
         with patch.object(tools, "_service") as service:
-            service.files.return_value.list.return_value.execute.return_value = {"files": []}
-            message = tools.drive_list.invoke({
-                "type": "tool_call", "id": "call", "name": "drive_list", "args": {}
-            })
+            service.files.return_value.list.return_value.execute.return_value = {
+                "files": []
+            }
+            message = tools.drive_list.invoke(
+                {"type": "tool_call", "id": "call", "name": "drive_list", "args": {}}
+            )
             self.assertEqual(json.loads(message.content), {"files": []})
 
 
@@ -229,7 +308,10 @@ def _folder(fid, parent=None, **extra):
 
 
 def _http_error(status):
-    return HttpError(Response({"status": status}), json.dumps({"error": {"message": "boom"}}).encode())
+    return HttpError(
+        Response({"status": status}),
+        json.dumps({"error": {"message": "boom"}}).encode(),
+    )
 
 
 class DriveListScopeTests(unittest.TestCase):
@@ -247,9 +329,9 @@ class DriveListScopeTests(unittest.TestCase):
                 api.list.return_value.execute.side_effect = list_error
             else:
                 api.list.return_value.execute.return_value = {"files": []}
-            message = tools.drive_list.invoke({
-                "type": "tool_call", "id": "call", "name": "drive_list", "args": args
-            })
+            message = tools.drive_list.invoke(
+                {"type": "tool_call", "id": "call", "name": "drive_list", "args": args}
+            )
             return message.content, api
 
     def test_rejects_malformed_folder_ids(self):
@@ -262,12 +344,19 @@ class DriveListScopeTests(unittest.TestCase):
 
     def test_root_alias_is_denied(self):
         # Drive resolves "root" to the user's own root, whose id differs from "root".
-        reply, api = self._run({"folder_id": "root_alias"}, tree={"root_alias": _folder("real-id", "elsewhere")})
+        reply, api = self._run(
+            {"folder_id": "root_alias"},
+            tree={"root_alias": _folder("real-id", "elsewhere")},
+        )
         self.assertIn("inside the configured root", reply)
         api.list.assert_not_called()
 
     def test_multi_level_descendant_is_allowed(self):
-        tree = {"c": _folder("c", "b"), "b": _folder("b", "a"), "a": _folder("a", "root")}
+        tree = {
+            "c": _folder("c", "b"),
+            "b": _folder("b", "a"),
+            "a": _folder("a", "root"),
+        }
         _, api = self._run({"folder_id": "c"}, tree=tree)
         self.assertEqual(api.get.call_count, 3)
         self.assertIn("'c' in parents", api.list.call_args.kwargs["q"])
@@ -281,7 +370,10 @@ class DriveListScopeTests(unittest.TestCase):
     def test_denies_trashed_folder_or_trashed_ancestor(self):
         trees = {
             "trashed folder": {"c": _folder("c", "root", trashed=True)},
-            "trashed ancestor": {"c": _folder("c", "b"), "b": _folder("b", "root", trashed=True)},
+            "trashed ancestor": {
+                "c": _folder("c", "b"),
+                "b": _folder("b", "root", trashed=True),
+            },
         }
         for name, tree in trees.items():
             with self.subTest(name):
@@ -308,7 +400,10 @@ class DriveListScopeTests(unittest.TestCase):
         self.assertEqual(api.list.call_args.kwargs["pageToken"], "t")
 
     def test_kind_filters(self):
-        for kind, expected in (("folders", f"mimeType = '{FOLDER}'"), ("files", f"mimeType != '{FOLDER}'")):
+        for kind, expected in (
+            ("folders", f"mimeType = '{FOLDER}'"),
+            ("files", f"mimeType != '{FOLDER}'"),
+        ):
             with self.subTest(kind=kind):
                 _, api = self._run({"kind": kind})
                 self.assertIn(expected, api.list.call_args.kwargs["q"])
@@ -316,10 +411,15 @@ class DriveListScopeTests(unittest.TestCase):
         self.assertNotIn("mimeType", api.list.call_args.kwargs["q"])
 
     def test_drive_errors(self):
-        for status, expected in ((403, "inside the configured root"), (404, "inside the configured root"),
-                                 (400, "Retry from the first page")):
+        for status, expected in (
+            (403, "inside the configured root"),
+            (404, "inside the configured root"),
+            (400, "Retry from the first page"),
+        ):
             with self.subTest(status=status, stage="get"):
-                reply, api = self._run({"folder_id": "c"}, get_error=_http_error(status))
+                reply, api = self._run(
+                    {"folder_id": "c"}, get_error=_http_error(status)
+                )
                 self.assertIn(expected, reply)
                 api.list.assert_not_called()
             with self.subTest(status=status, stage="list"):

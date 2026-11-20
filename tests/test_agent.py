@@ -1,34 +1,51 @@
 import os
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 # Supply inert settings; agent import builds the model and tools at import time.
-with patch.dict(os.environ, GROQ_API_KEY="test", DRIVE_FOLDER_ID="root", GOOGLE_SERVICE_ACCOUNT_JSON="{}"):
+with patch.dict(
+    os.environ,
+    GROQ_API_KEY="test",
+    DRIVE_FOLDER_ID="root",
+    GOOGLE_SERVICE_ACCOUNT_JSON="{}",
+):
     from server import drive
+
     with patch.object(drive, "get_drive_service"):
         from server import agent
 
 
 def _list(files, continuation=False, call_id="1"):
-    return ToolMessage(content="{}", name="drive_list", tool_call_id=call_id,
-                       artifact={"files": files, "continuation": continuation})
+    return ToolMessage(
+        content="{}",
+        name="drive_list",
+        tool_call_id=call_id,
+        artifact={"files": files, "continuation": continuation},
+    )
 
 
 def _search(files, call_id="1"):
-    return ToolMessage(content="{}", artifact=files, name="drive_search", tool_call_id=call_id)
+    return ToolMessage(
+        content="{}", artifact=files, name="drive_search", tool_call_id=call_id
+    )
 
 
 def _search_round(*queries):
-    return AIMessage(content="", tool_calls=[
-        {"name": "drive_search", "id": call_id, "args": {"query": query}}
-        for call_id, query in queries
-    ])
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {"name": "drive_search", "id": call_id, "args": {"query": query}}
+            for call_id, query in queries
+        ],
+    )
 
 
 def _list_round(call_id="1"):
-    return AIMessage(content="", tool_calls=[{"name": "drive_list", "id": call_id, "args": {}}])
+    return AIMessage(
+        content="", tool_calls=[{"name": "drive_list", "id": call_id, "args": {}}]
+    )
 
 
 class RunAgentTests(unittest.TestCase):
@@ -40,7 +57,12 @@ class RunAgentTests(unittest.TestCase):
         return result, graph
 
     def test_prompt_is_rebuilt_per_request_and_sent_first(self):
-        _, graph = self._run(history=[{"role": "user", "content": "hi"}, {"role": "assistant", "content": "yo"}])
+        _, graph = self._run(
+            history=[
+                {"role": "user", "content": "hi"},
+                {"role": "assistant", "content": "yo"},
+            ]
+        )
         sent = graph.invoke.call_args.args[0]["messages"]
         self.assertIsInstance(sent[0], SystemMessage)
         self.assertIn("drive_list", sent[0].content)
@@ -74,13 +96,17 @@ class RunAgentTests(unittest.TestCase):
         self.assertEqual(files, [{"id": "b"}])
 
     def test_search_after_list_replaces_files(self):
-        (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), _search([{"id": "s"}], call_id="2"))
+        (_, files), _ = self._run(
+            _list([{"id": "a"}], call_id="1"), _search([{"id": "s"}], call_id="2")
+        )
         self.assertEqual(files, [{"id": "s"}])
 
     def test_parallel_searches_merge_by_id(self):
         updated = {"id": "a", "name": "renamed", "webViewLink": "https://example.com/a"}
         (_, files), _ = self._run(
-            _search_round(("1", "name contains 'report'"), ("3", "name contains 'budget'")),
+            _search_round(
+                ("1", "name contains 'report'"), ("3", "name contains 'budget'")
+            ),
             _search([{"id": "a"}, {"id": "b"}], call_id="1"),
             _search([{"id": "c"}, updated], call_id="3"),
         )
@@ -98,8 +124,12 @@ class RunAgentTests(unittest.TestCase):
                 self.assertEqual(files, refined)
 
     def test_failed_parallel_search_does_not_clear_sibling_hits(self):
-        invalid = ToolMessage(content="Invalid search filter: nope.", name="drive_search",
-                              tool_call_id="2", artifact=[])
+        invalid = ToolMessage(
+            content="Invalid search filter: nope.",
+            name="drive_search",
+            tool_call_id="2",
+            artifact=[],
+        )
         (_, files), _ = self._run(
             _search_round(("1", "name contains 'a'"), ("2", "bad")),
             _search([{"id": "a"}], call_id="1"),
@@ -119,8 +149,12 @@ class RunAgentTests(unittest.TestCase):
         self.assertEqual(files, [{"id": "c"}])
 
     def test_denied_listing_after_search_keeps_search_hits(self):
-        denied = ToolMessage(content="Choose a folder inside the configured root.",
-                             name="drive_list", tool_call_id="2", artifact={})
+        denied = ToolMessage(
+            content="Choose a folder inside the configured root.",
+            name="drive_list",
+            tool_call_id="2",
+            artifact={},
+        )
         (_, files), _ = self._run(
             _search_round(("1", "name contains 'a'")),
             _search([{"id": "a"}], call_id="1"),
@@ -138,9 +172,14 @@ class RunAgentTests(unittest.TestCase):
         self.assertEqual(files, [{"id": "a"}, {"id": "b"}])
 
     def test_empty_or_failed_search_clears_earlier_files(self):
-        for content in ("No files found.", "Invalid search filter: nope. Revise the query and try again."):
+        for content in (
+            "No files found.",
+            "Invalid search filter: nope. Revise the query and try again.",
+        ):
             with self.subTest(content=content):
-                empty = ToolMessage(content=content, name="drive_search", tool_call_id="2", artifact=[])
+                empty = ToolMessage(
+                    content=content, name="drive_search", tool_call_id="2", artifact=[]
+                )
                 (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), empty)
                 self.assertEqual(files, [])
 
@@ -150,8 +189,12 @@ class RunAgentTests(unittest.TestCase):
         self.assertIn("Never claim a newest", prompt)
 
     def test_empty_artifact_from_denied_listing_keeps_earlier_files(self):
-        denied = ToolMessage(content="Choose a folder inside the configured root.",
-                             name="drive_list", tool_call_id="2", artifact={})
+        denied = ToolMessage(
+            content="Choose a folder inside the configured root.",
+            name="drive_list",
+            tool_call_id="2",
+            artifact={},
+        )
         (_, files), _ = self._run(_list([{"id": "a"}], call_id="1"), denied)
         self.assertEqual(files, [{"id": "a"}])
 

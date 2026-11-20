@@ -11,10 +11,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice",
-      "report"
-    ],
+    "expected_ids": ["invoice", "report"],
     "note": "Includes nested files and excludes deleted and out-of-scope copies."
   },
   {
@@ -29,9 +26,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "logo"
-    ],
+    "expected_ids": ["logo"],
     "note": "Image subtype."
   },
   {
@@ -46,9 +41,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "cover"
-    ],
+    "expected_ids": ["cover"],
     "note": "JPEG extension and MIME type differ."
   },
   {
@@ -63,10 +56,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "logo",
-      "cover"
-    ],
+    "expected_ids": ["logo", "cover"],
     "note": "Multiple image subtypes."
   },
   {
@@ -81,9 +71,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "budget"
-    ],
+    "expected_ids": ["budget"],
     "note": "Non-native spreadsheet format."
   },
   {
@@ -98,9 +86,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "notes"
-    ],
+    "expected_ids": ["notes"],
     "note": "Root-level file."
   },
   {
@@ -115,9 +101,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "report"
-    ],
+    "expected_ids": ["report"],
     "note": "Trashed duplicate excluded."
   },
   {
@@ -132,9 +116,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice"
-    ],
+    "expected_ids": ["invoice"],
     "note": "Outside-root duplicate excluded."
   },
   {
@@ -149,9 +131,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "budget"
-    ],
+    "expected_ids": ["budget"],
     "note": "Filename prefix."
   },
   {
@@ -166,9 +146,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "notes"
-    ],
+    "expected_ids": ["notes"],
     "note": "Body-only keyword."
   },
   {
@@ -183,9 +161,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice"
-    ],
+    "expected_ids": ["invoice"],
     "note": "Company mentioned only in body."
   },
   {
@@ -200,9 +176,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "budget"
-    ],
+    "expected_ids": ["budget"],
     "note": "Body keyword in CSV."
   },
   {
@@ -217,9 +191,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice"
-    ],
+    "expected_ids": ["invoice"],
     "note": "Date and type intersection."
   },
   {
@@ -234,9 +206,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "report"
-    ],
+    "expected_ids": ["report"],
     "note": "Upper date bound."
   },
   {
@@ -251,9 +221,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "report"
-    ],
+    "expected_ids": ["report"],
     "note": "Body and type intersection."
   },
   {
@@ -283,10 +251,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "work",
-      "art"
-    ],
+    "expected_ids": ["work", "art"],
     "note": "Browse folders only."
   },
   {
@@ -301,9 +266,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "notes"
-    ],
+    "expected_ids": ["notes"],
     "note": "Exclude descendants and folder entries."
   },
   {
@@ -326,11 +289,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice",
-      "report",
-      "budget"
-    ],
+    "expected_ids": ["invoice", "report", "budget"],
     "note": "Navigate then replace root cards."
   },
   {
@@ -353,10 +312,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "cover",
-      "logo"
-    ],
+    "expected_ids": ["cover", "logo"],
     "note": "Sibling folder navigation."
   },
   {
@@ -377,12 +333,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "invoice",
-      "report",
-      "cover",
-      "logo"
-    ],
+    "expected_ids": ["invoice", "report", "cover", "logo"],
     "note": "Union parallel calls or use an equivalent composite query."
   },
   {
@@ -397,9 +348,7 @@
         }
       ]
     ],
-    "expected_ids": [
-      "report"
-    ],
+    "expected_ids": ["report"],
     "note": "Use the previous user request to resolve the type.",
     "previous_message": "find every pdf"
   },

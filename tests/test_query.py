@@ -40,7 +40,9 @@ class QueryTests(unittest.TestCase):
             ("name = word", "'word'", "single-quoted"),
             (None, "NoneType", "string"),
         ):
-            with self.subTest(query=query), self.assertRaises(InvalidDriveQuery) as error:
+            with self.subTest(query=query), self.assertRaises(
+                InvalidDriveQuery
+            ) as error:
                 validate_query(query)
             self.assertIn(offending, str(error.exception))
             self.assertIn(expected, str(error.exception))

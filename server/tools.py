@@ -4,11 +4,13 @@ from typing import Literal
 
 from googleapiclient.errors import HttpError
 from langchain_core.tools import tool
+
 from server.config import DRIVE_FOLDER_ID
 from server.drive import get_drive_service, search_files
 from server.query import InvalidDriveQuery
 
 _service = get_drive_service()
+
 
 @tool(response_format="content_and_artifact")
 def drive_search(query: str) -> tuple[str, list[dict]]:
@@ -28,15 +30,23 @@ def drive_search(query: str) -> tuple[str, list[dict]]:
     except HttpError as exc:
         if exc.resp.status != 400:
             raise
-        return f"Drive rejected the filter: {exc.reason}. Check field values and try again.", []
+        return (
+            f"Drive rejected the filter: {exc.reason}. Check field values and try again.",
+            [],
+        )
     if not results:
         return "No files found.", []
-    summary = {"files": [
-        {key: value for key, value in file.items() if key != "webViewLink"}
-        for file in results
-    ], "truncated": truncated}
+    summary = {
+        "files": [
+            {key: value for key, value in file.items() if key != "webViewLink"}
+            for file in results
+        ],
+        "truncated": truncated,
+    }
     if truncated:
-        summary["note"] = f"Showing the first {len(results)} matches. Ask the user to narrow the query."
+        summary["note"] = (
+            f"Showing the first {len(results)} matches. Ask the user to narrow the query."
+        )
     return json.dumps(summary), results
 
 
@@ -62,11 +72,17 @@ def drive_list(
             if current in visited:
                 return denied, {}
             visited.add(current)
-            item = _service.files().get(
-                fileId=current, fields="id,mimeType,parents,trashed"
-            ).execute()
-            if (item["id"] != current or item.get("trashed")
-                    or item["mimeType"] != folder_type or not item.get("parents")):
+            item = (
+                _service.files()
+                .get(fileId=current, fields="id,mimeType,parents,trashed")
+                .execute()
+            )
+            if (
+                item["id"] != current
+                or item.get("trashed")
+                or item["mimeType"] != folder_type
+                or not item.get("parents")
+            ):
                 return denied, {}
             current = item["parents"][0]
 
@@ -74,10 +90,16 @@ def drive_list(
         if kind != "all":
             operator = "=" if kind == "folders" else "!="
             query += f" and mimeType {operator} '{folder_type}'"
-        page = _service.files().list(
-            q=query, pageSize=50, pageToken=page_token,
-            fields="nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink)",
-        ).execute()
+        page = (
+            _service.files()
+            .list(
+                q=query,
+                pageSize=50,
+                pageToken=page_token,
+                fields="nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink)",
+            )
+            .execute()
+        )
     except HttpError as exc:
         if exc.resp.status in (403, 404):
             return denied, {}

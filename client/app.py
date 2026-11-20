@@ -1,10 +1,12 @@
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import requests
 import streamlit as st
-from client.config import BACKEND_URL
 
+from client.config import BACKEND_URL
 
 st.set_page_config(page_title="Filo", page_icon="🗂️")
 st.title("🗂️ Filo")
@@ -14,20 +16,25 @@ if "messages" not in st.session_state:
 if "file_results" not in st.session_state:
     st.session_state.file_results = {}
 
+
 def _render_files(files: list[dict]):
     if not files:
         return
 
+    MIME_ICONS = {
+        "document": "📄",
+        "spreadsheet": "📊",
+        "presentation": "📝",
+        "pdf": "📑",
+        "image": "🖼️",
+        "folder": "📁",
+    }
+
     def get_icon(mime):
-        return (
-            "📄" if "document" in mime else
-            "📊" if "spreadsheet" in mime else
-            "📝" if "presentation" in mime else
-            "📑" if "pdf" in mime else
-            "🖼️" if "image" in mime else
-            "📁" if "folder" in mime else
-            "📎"
-        )
+        for keyword, icon in MIME_ICONS.items():
+            if keyword in mime:
+                return icon
+        return "📎"
 
     def format_size(size):
         if not size:
@@ -35,7 +42,7 @@ def _render_files(files: list[dict]):
         size = int(size)
         if size < 1024:
             return f"{size} B"
-        elif size < 1024 ** 2:
+        elif size < 1024**2:
             return f"{size / 1024:.1f} KB"
         else:
             return f"{size / 1024 ** 2:.1f} MB"
@@ -74,6 +81,7 @@ def _render_files(files: list[dict]):
     """
     st.iframe(table_html, height=min(80 + len(files) * 48, 600))
 
+
 # Render history
 for i, msg in enumerate(st.session_state.messages):
     st.chat_message(msg["role"]).write(msg["content"])
@@ -95,7 +103,7 @@ if user_input:
             )
             res.raise_for_status()
             data = res.json()
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             print(f"[error] {type(e).__name__}: {e}")
             st.error("Something went wrong. Please try again.")
             st.session_state.messages.pop()

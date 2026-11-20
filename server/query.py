@@ -12,7 +12,9 @@ _OPERATORS = {
     "modifiedTime": {"=", "!=", "<", ">", "<=", ">="},
     "createdTime": {"=", "!=", "<", ">", "<=", ">="},
 }
-_TOKEN = re.compile(r"""[ \t\r\n]+|'(?:[^'\\\x00-\x1f]|\\['\\])*'|[A-Za-z]+|!=|<=|>=|[=<>()]""")
+_TOKEN = re.compile(
+    r"""[ \t\r\n]+|'(?:[^'\\\x00-\x1f]|\\['\\])*'|[A-Za-z]+|!=|<=|>=|[=<>()]"""
+)
 
 
 def _tokens(query: str):
@@ -32,7 +34,9 @@ def _tokens(query: str):
 
 def validate_query(query: str) -> None:
     if not isinstance(query, str):
-        raise InvalidDriveQuery(f"Expected a string filter, got {type(query).__name__}.")
+        raise InvalidDriveQuery(
+            f"Expected a string filter, got {type(query).__name__}."
+        )
 
     tokens = _tokens(query)
     depth = 0
@@ -48,24 +52,34 @@ def validate_query(query: str) -> None:
                 operator = next(tokens, "<end>")
                 if operator not in _OPERATORS[token]:
                     allowed = ", ".join(sorted(_OPERATORS[token]))
-                    raise InvalidDriveQuery(f"Got {operator!r} after {token}; expected one of {allowed}.")
+                    raise InvalidDriveQuery(
+                        f"Got {operator!r} after {token}; expected one of {allowed}."
+                    )
                 value = next(tokens, "<end>")
                 if not value.startswith("'"):
-                    raise InvalidDriveQuery(f"Got {value!r} after {operator}; expected a single-quoted value.")
+                    raise InvalidDriveQuery(
+                        f"Got {value!r} after {operator}; expected a single-quoted value."
+                    )
                 needs_predicate = False
             else:
                 fields = ", ".join(_OPERATORS)
-                raise InvalidDriveQuery(f"Got {token!r}; expected a group or a field ({fields}).")
+                raise InvalidDriveQuery(
+                    f"Got {token!r}; expected a group or a field ({fields})."
+                )
         elif token in ("and", "or"):
             needs_predicate = True
         elif token == ")" and depth:
             depth -= 1
         else:
-            expected = "'and', 'or', or ')'" if depth else "'and', 'or', or end of filter"
+            expected = (
+                "'and', 'or', or ')'" if depth else "'and', 'or', or end of filter"
+            )
             raise InvalidDriveQuery(f"Got {token!r}; expected {expected}.")
         previous = token
     if needs_predicate:
         after = f" after {previous!r}" if previous else ""
-        raise InvalidDriveQuery(f"Unexpected end of filter{after}; expected a predicate.")
+        raise InvalidDriveQuery(
+            f"Unexpected end of filter{after}; expected a predicate."
+        )
     if depth:
         raise InvalidDriveQuery("Unexpected end of filter; expected ')'.")

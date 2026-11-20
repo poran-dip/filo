@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from groq import RateLimitError
 from pydantic import BaseModel
+
 from server.agent import run_agent
 
 app = FastAPI()
@@ -24,4 +25,7 @@ async def chat(body: ChatRequest):
             "files": files,
         }
     except RateLimitError:
-        return {"response": "I'm currently rate limited — please try again in a few minutes.", "files": []}
+        return {
+            "response": "I'm currently rate limited — please try again in a few minutes.",
+            "files": [],
+        }

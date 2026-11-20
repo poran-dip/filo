@@ -1,7 +1,9 @@
 from datetime import date
+
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
+
 from server.tools import drive_list, drive_search
 
 
@@ -46,6 +48,7 @@ Key rules:
 - Be concise. Avoid unnecessary filler or repetitive closing lines
 - You only assist with finding and exploring files in Google Drive. If the user asks something unrelated, politely let them know you're Filo — a Drive file assistant — and redirect them to ask about their files.
 """
+
 
 llm = ChatGroq(model="openai/gpt-oss-120b")
 

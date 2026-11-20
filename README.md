@@ -93,13 +93,19 @@ See `.env.example` for reference.
 - **Backend** — Render (configured via `render.yaml`). Set the three env vars in the Render dashboard.
 - **Frontend** — Streamlit Community Cloud. Connect the GitHub repo, set main file to `client/app.py`, and add `BACKEND_URL` pointing to your Render service URL in the app secrets.
 
+## Limitations
+
+Filo searches one configured folder tree using Google Drive’s keyword and full-text matching. Search results depend on the terms Drive indexes. Both Drive and Groq API rate limits apply.
+
 ## Drive agent evaluation
 
 `python eval/run_eval.py` evaluates the real Groq model. It needs `GROQ_API_KEY`; Drive credentials are not needed, because Drive is a fixed local folder tree. Groq receives the user conversation and chooses its own tool calls, then the production agent graph, tools and card selection run unchanged against the fixture. Each of the 23 cases has a user request, reference tool calls, expected file IDs and a note.
 
 A case run passes only if the displayed card IDs match the expected IDs exactly (extra, missing and duplicate cards all fail), the model used the expected tools, and every tool result was valid. Reply wording is not scored. The runner prints each failing case, the pass rate, and micro recall: unique expected IDs retrieved divided by total expected IDs across case runs, with the unexpected-card count beside it.
 
-Model output varies between runs. Use `--runs N` to run each case N times; cases that pass only some of the time are listed as `FLAKY`. Provider and network errors are retried (`--retries`, `--backoff`) and reported as errors if they persist, and any error fails the run. By default the live run only reports. Pass `--min-pass 0.9` (a fraction of case runs) to make it fail below a pass rate. No live score has been recorded yet, so choose that threshold after a first real run.
+Model output varies between runs. Use `--runs N` to run each case N times; cases that pass only some of the time are listed as `FLAKY`. Provider and network errors are retried (`--retries`, `--backoff`) and reported as errors if they persist, and any error fails the run. By default the live run only reports. Pass `--min-pass 0.9` (a fraction of case runs) to make it fail below a pass rate.
+
+In one live run against the fixed fixture, `openai/gpt-oss-120b` passed **21/23 cases (91.3%)** and retrieved **30/30 expected file IDs (100% micro recall)** with **zero unexpected cards**. Both failed cases displayed the correct folder contents but also called `drive_search` when the grader expected only `drive_list`. [GitHub Actions run](https://github.com/poran-dip/filo/actions/runs/44758953295)
 
 `python eval/run_eval.py --replay` is a deterministic harness check, not a model evaluation. No model is called: each case's reference tool calls are replayed. It verifies the fixture, the tools and card selection, so it can catch regressions such as a scope leak or dropped results from parallel searches. It cannot judge tool choice or follow-up handling, because the replayed calls come from the case itself. Any failing case fails it, and no tolerance is needed because it is deterministic. The fixture has 10 files and 2 folders, so it does not exercise pagination, the 20-parent batching, the 100-result cap or deep folder trees. It also approximates text matching and uses fixed UTC timestamps.
 
@@ -110,4 +116,4 @@ Model output varies between runs. Use `--runs N` to run each case N times; cases
 
 Before the fixes, parallel calls returning PDFs and images dropped the PDFs.
 
-GitHub Actions runs the replay check as `harness-check` on pushes to main in the **Drive agent eval** workflow; require it in branch protection to gate merges. The real-model eval runs only when you start the workflow manually (`workflow_dispatch`) on a trusted branch, with the repository secret `EVAL_GROQ_API_KEY`. It uses Groq quota, and it accepts the `runs` and `min_pass` inputs described above.
+GitHub Actions runs the replay check as `harness-check` on pull requests targeting `main` and on pushes to `main`. To gate merges, require `harness-check` in branch protection. The real-model eval runs only when you start the workflow manually (`workflow_dispatch`) on a trusted branch, with the repository secret `EVAL_GROQ_API_KEY`. It uses Groq quota, and it accepts the `runs` and `min_pass` inputs described above.
