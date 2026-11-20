@@ -55,6 +55,35 @@ graph = create_agent(
 )
 
 
+def _files_to_display(all_messages) -> list[dict]:
+    """
+    Pick the file cards for this turn from the tool results.
+
+    - A drive_list page shows the listing; continuation pages extend it, any other page starts a new one.
+    - drive_search results show the matches. Searches issued in parallel in one tool-call round are
+      merged by file id; a later round (a refinement or retry) replaces them, even if it finds nothing.
+    - A tool result with no files artifact (e.g. a denied listing) leaves what is already shown alone.
+    """
+    listing: list[dict] = []
+    search_hits: dict[str, dict] = {}
+    shown: list[dict] = []
+    for msg in all_messages:
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            search_hits = {}
+        elif getattr(msg, "name", None) == "drive_list":
+            page = getattr(msg, "artifact", None)
+            if page:
+                if not page["continuation"]:
+                    listing = []
+                listing.extend(page["files"])
+                shown = list(listing)
+        elif getattr(msg, "name", None) == "drive_search":
+            for file in msg.artifact or []:
+                search_hits[file["id"]] = file
+            shown = list(search_hits.values())
+    return shown
+
+
 def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
     """
     messages: list of {"role": "user"|"assistant", "content": "..."}
@@ -72,23 +101,4 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
 
     ai_reply = all_messages[-1].content
 
-    search_hits = {}
-    listing = []
-    displayed = listing
-    for msg in all_messages:
-        if isinstance(msg, AIMessage) and msg.tool_calls:
-            # Parallel calls share this accumulator until the next tool-call round.
-            search_hits = {}
-        elif getattr(msg, "name", None) == "drive_list":
-            page = getattr(msg, "artifact", None)
-            if page:
-                if not page["continuation"]:
-                    listing = []
-                listing.extend(page["files"])
-                displayed = listing
-        elif getattr(msg, "name", None) == "drive_search":
-            for file in msg.artifact or []:
-                search_hits[file["id"]] = file
-            displayed = search_hits.values()
-
-    return ai_reply, list(displayed)
+    return ai_reply, _files_to_display(all_messages)
