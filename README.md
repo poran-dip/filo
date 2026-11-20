@@ -94,33 +94,38 @@ See `.env.example` for reference.
 
 ## Drive agent evaluation
 
-Run `python eval/run_eval.py` after installing the project requirements. The runner
-exercises the production agent graph, tools and displayed file IDs against a fixed
-local folder tree. Each of the 23 cases includes a user request, reference tool
-calls, expected IDs and a note. The runner prints exact-case failures, the pass rate and micro recall.
-Recall sums unique expected IDs retrieved per case and divides by the total
-expected IDs across cases. Duplicates earn no extra credit. Extra cards, wrong
-tools and zero-hit cases are still checked in the exact-case report.
-The eval passes when recall strictly exceeds 90% and the run completes without
-execution errors. A suite with no expected IDs cannot pass.
+`python eval/run_eval.py` evaluates the real Groq model. It needs `GROQ_API_KEY`; Drive credentials are not
+needed, because Drive is a fixed local folder tree. Groq receives the user conversation and chooses its own
+tool calls, then the production agent graph, tools and card selection run unchanged against the fixture.
+Each of the 23 cases has a user request, reference tool calls, expected file IDs and a note.
 
-| Scripted tool-call replay | Passed |
+A case run passes only if the displayed card IDs match the expected IDs exactly (extra, missing and
+duplicate cards all fail), the model used the expected tools, and every tool result was valid. Reply wording is
+not scored. The runner prints each failing case, the pass rate, and micro recall: unique expected IDs
+retrieved divided by total expected IDs across case runs, with the unexpected-card count beside it.
+
+Model output varies between runs. Use `--runs N` to run each case N times; cases that pass only some
+of the time are listed as `FLAKY`. Provider and network errors are retried (`--retries`, `--backoff`)
+and reported as errors if they persist, and any error fails the run. By default the live run only reports.
+Pass `--min-pass 0.9` (a fraction of case runs) to make it fail below a pass rate. No live score has been
+recorded yet, so choose that threshold after a first real run.
+
+`python eval/run_eval.py --replay` is a deterministic harness check, not a model evaluation. No model is
+called: each case's reference tool calls are replayed. It verifies the fixture, the tools and card selection,
+so it can catch regressions such as a scope leak or dropped results from parallel searches. It cannot judge
+tool choice or follow-up handling, because the replayed calls come from the case itself. Any failing case fails
+it, and no tolerance is needed because it is deterministic. The fixture has 10 files and 2 folders, so it does
+not exercise pagination, the 20-parent batching, the 100-result cap or deep folder trees. It also
+approximates text matching and uses fixed UTC timestamps.
+
+| Replay check | Passed |
 | --- | --- |
-| Post-P1 baseline (`09b063c`) | 22/23 (95.7%) |
+| Before the search-result fixes (`09b063c`) | 22/23 (95.7%) |
 | After the search-result fixes (`8ee91a0`) | 23/23 (100%) |
 
-The baseline dropped the PDFs when parallel calls returned PDFs and images.
-Replay supplies model responses, so its score measures tool execution and card
-selection. GitHub Actions runs it on pull requests and pushes to main in the
-**Drive agent eval** workflow. Require its `replay-recall` check in branch protection to gate merges.
+Before the fixes, parallel calls returning PDFs and images dropped the PDFs.
 
-To measure natural-language tool selection, set `GROQ_API_KEY` and run
-`python eval/run_eval.py --live`. Groq receives the user conversation and chooses
-its own calls against the same synthetic fixture. The grader checks tool selection
-and the exact displayed IDs (including unexpected duplicates). Reply wording is
-unscored. The fixture approximates text matching and uses fixed UTC timestamps;
-neither mode requires Drive credentials. No live score has been recorded here.
-
-For a pre-merge live run, configure the repository secret `EVAL_GROQ_API_KEY` and
-manually run the **Drive agent eval** workflow on the trusted branch to review. The live job
-uses Groq quota and reports model or provider errors as failed cases.
+GitHub Actions runs the replay check as `harness-check` on pull requests and pushes to main in the
+**Drive agent eval** workflow; require it in branch protection to gate merges. The real-model eval runs only
+when you start the workflow manually (`workflow_dispatch`) on a trusted branch, with the repository secret
+`EVAL_GROQ_API_KEY`. It uses Groq quota, and it accepts the `runs` and `min_pass` inputs described above.
