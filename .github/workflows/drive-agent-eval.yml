@@ -1,0 +1,42 @@
+name: Drive agent eval
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Runs per case against Groq
+        default: "1"
+      min_pass:
+        description: Fail below this pass rate, 0 to 1 (blank reports only)
+        default: ""
+
+jobs:
+  harness-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: runtime.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Replay reference tool calls (no model, exact gate)
+        run: python eval/run_eval.py --replay
+
+  live-eval:
+    if: github.event_name == 'workflow_dispatch'
+    needs: harness-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: runtime.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Evaluate the real Groq model on the fixture
+        env:
+          GROQ_API_KEY: ${{ secrets.EVAL_GROQ_API_KEY }}
+          RUNS: ${{ inputs.runs }}
+          MIN_PASS: ${{ inputs.min_pass }}
+        run: python eval/run_eval.py --runs "$RUNS" ${MIN_PASS:+--min-pass "$MIN_PASS"}
