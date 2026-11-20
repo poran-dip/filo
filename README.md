@@ -6,7 +6,7 @@ To use Filo with your own Drive, clone the repo, set up a service account, and c
 
 ## Stack
 
-- **Backend** — Python, FastAPI, LangGraph, LangChain, Groq (Llama 3.3 70B)
+- **Backend** — Python, FastAPI, LangGraph, LangChain, Groq (GPT OSS 120B)
 - **Frontend** — Streamlit
 - **Integration** — Google Drive API v3 via Service Account
 
