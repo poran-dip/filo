@@ -7,9 +7,11 @@ from server.query import validate_query
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
+MAX_SEARCH_RESULTS = 100
 PARENTS_PER_QUERY = 20
 _folder_cache: tuple[str, float, tuple[str, ...]] | None = None
-CACHE_TTL = 3600    # 1 hour
+# A cached tree can miss new folders or retain moved folders until refresh.
+CACHE_TTL = 60  # seconds
 
 
 def get_drive_service():
@@ -60,7 +62,8 @@ def get_all_folder_ids(service, root_folder_id: str) -> tuple[str, ...]:
     return ids
 
 
-def search_files(service, query: str) -> list[dict]:
+def search_files(service, query: str) -> tuple[list[dict], bool]:
+    """Return unique matches and whether an additional match was found."""
     validate_query(query)
     folder_ids = get_all_folder_ids(service, DRIVE_FOLDER_ID)
     files_by_id = {}
@@ -68,5 +71,7 @@ def search_files(service, query: str) -> list[dict]:
         parents = " or ".join(f"'{fid}' in parents" for fid in batch)
         scoped_query = f"({parents}) and ({query}) and trashed = false"
         for file in _iter_files(service, scoped_query, "id,name,mimeType,size,modifiedTime,webViewLink"):
+            if len(files_by_id) == MAX_SEARCH_RESULTS and file["id"] not in files_by_id:
+                return list(files_by_id.values()), True
             files_by_id[file["id"]] = file
-    return list(files_by_id.values())
+    return list(files_by_id.values()), False

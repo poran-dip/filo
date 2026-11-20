@@ -10,8 +10,8 @@ from server.query import InvalidDriveQuery
 
 _service = get_drive_service()
 
-@tool
-def drive_search(query: str) -> str:
+@tool(response_format="content_and_artifact")
+def drive_search(query: str) -> tuple[str, list[dict]]:
     """
     Search Google Drive using a Drive API q-parameter string.
     Examples:
@@ -19,19 +19,25 @@ def drive_search(query: str) -> str:
       mimeType = 'application/pdf'
       fullText contains 'quarterly report'
       modifiedTime > '2024-01-01T00:00:00' and name contains 'invoice'
-    Combine clauses with 'and' / 'or'. Always return results as a list.
+    Combine clauses with 'and' / 'or'.
     """
     try:
-        results = search_files(_service, query)
+        results, truncated = search_files(_service, query)
     except InvalidDriveQuery as exc:
-        return f"Invalid search filter: {exc} Revise the query and try again."
+        return f"Invalid search filter: {exc} Revise the query and try again.", []
     except HttpError as exc:
         if exc.resp.status != 400:
             raise
-        return f"Drive rejected the filter: {exc.reason}. Check field values and try again."
+        return f"Drive rejected the filter: {exc.reason}. Check field values and try again.", []
     if not results:
-        return "No files found."
-    return str(results)
+        return "No files found.", []
+    summary = {"files": [
+        {key: value for key, value in file.items() if key != "webViewLink"}
+        for file in results
+    ], "truncated": truncated}
+    if truncated:
+        summary["note"] = f"Showing the first {len(results)} matches. Ask the user to narrow the query."
+    return json.dumps(summary), results
 
 
 @tool(response_format="content_and_artifact")

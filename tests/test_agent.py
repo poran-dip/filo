@@ -17,7 +17,7 @@ def _list(files, continuation=False, call_id="1"):
 
 
 def _search(files, call_id="1"):
-    return ToolMessage(content=str(files), name="drive_search", tool_call_id=call_id)
+    return ToolMessage(content="{}", artifact=files, name="drive_search", tool_call_id=call_id)
 
 
 class RunAgentTests(unittest.TestCase):

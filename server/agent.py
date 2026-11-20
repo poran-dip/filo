@@ -1,4 +1,3 @@
-import ast
 from datetime import date
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -82,9 +81,6 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
                 files.extend(page["files"])
         elif hasattr(msg, "name") and msg.name == "drive_search":
             if msg.content != "No files found.":
-                try:
-                    files = ast.literal_eval(msg.content)
-                except Exception:
-                    files = []
+                files = msg.artifact or []
 
     return ai_reply, files
