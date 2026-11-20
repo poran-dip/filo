@@ -39,3 +39,39 @@ class DriveSearchTests(unittest.TestCase):
                 else:
                     with self.assertRaises(HttpError):
                         tools.drive_search.invoke(args)
+
+
+class DriveListTests(unittest.TestCase):
+    def test_lists_root_and_returns_page_for_display(self):
+        with patch.object(tools, "_service") as service:
+            api = service.files.return_value
+            page = {"files": [{"id": "a", "name": "notes"}], "nextPageToken": "next"}
+            api.list.return_value.execute.return_value = page
+            message = tools.drive_list.invoke({
+                "type": "tool_call", "id": "call", "name": "drive_list", "args": {}
+            })
+            self.assertEqual(json.loads(message.content), page)
+            self.assertEqual(message.artifact["files"], page["files"])
+            api.get.assert_not_called()
+            self.assertEqual(api.list.call_args.kwargs["q"], "'root' in parents and trashed = false")
+
+    def test_scoped_folder_and_page(self):
+        with patch.object(tools, "_service") as service:
+            api = service.files.return_value
+            api.get.return_value.execute.return_value = {
+                "id": "child", "mimeType": "application/vnd.google-apps.folder", "parents": ["root"]
+            }
+            api.list.return_value.execute.return_value = {"files": []}
+            tools.drive_list.invoke({"folder_id": "child", "kind": "folders", "page_token": "next"})
+            params = api.list.call_args.kwargs
+            self.assertEqual(params["pageToken"], "next")
+            self.assertIn("mimeType = 'application/vnd.google-apps.folder'", params["q"])
+
+    def test_denies_unrelated_folder(self):
+        with patch.object(tools, "_service") as service:
+            api = service.files.return_value
+            api.get.return_value.execute.return_value = {
+                "id": "outside", "mimeType": "application/vnd.google-apps.folder"
+            }
+            tools.drive_list.invoke({"folder_id": "outside", "kind": "files"})
+            api.list.assert_not_called()
